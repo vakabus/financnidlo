@@ -17,3 +17,6 @@ test: buildTest
 
 run: build
 	./$(EXECUTABLE)
+
+runDebug: buildDebug
+	./$(EXECUTABLE)

@@ -34,7 +34,7 @@ auto constexpr token_splitter = [](std::string&& line){
     return result;
 };
 
-auto constexpr empty_line_filter = [](auto const & line) {
+auto constexpr empty_list_filter = [](auto const & line) {
     return !line.empty();
 };
 
@@ -57,7 +57,6 @@ std::pair<double,string> parseValue(string&& val) {
 }
 
 auto constexpr line_parser = [](std::vector<std::string>&& line) -> file_mapping::ConfigElement {
-
     assert(line.size() > 0);
     if (line.at(0) == "def") {
         if (line.at(1) == "person") {
