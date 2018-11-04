@@ -26,7 +26,6 @@ namespace file_mapping {
         string name;
     };
 
-
     using Value = std::pair<float, Currency>;
 
     using CurrencyTransformation = std::pair<Value, Value>;

@@ -7,12 +7,12 @@ int main() {
             .filter(empty_line_filter)
             .filter(comment_filter)
             .map(token_splitter)
-            .lazyForEach([](auto l) {
+            .lazyForEach([](std::vector<std::string> const & l) {
+                auto cl = l;
                 std::cout << "[line]\n";
-                Iter::from_vector(l).lazyForEach([](auto s) {
+                Iter::from_vector(cl).lazyForEach([](std::string const & s) {
                     std::cout << "    [token] " << s << "\n";
                 }).exhaust();
-            })
-            .exhaust();
+            }).exhaust();
     return 0;
 }

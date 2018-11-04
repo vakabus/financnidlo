@@ -5,18 +5,31 @@
 #include <cassert>
 #include <vector>
 #include <iostream>
+#include <functional>
+#include <type_traits>
+//#include <concepts>
 
+
+using std::optional;
+
+//template<typename T>
+//concept bool Iterator = requires(T a) {
+//typename T::value_type;
+//
+//{ a.next() } -> std::optional<typename T::value_type>;
+//};
 
 namespace internal {
-/**
- * This unused class represents an interface, that generic Iterator must implement.
- */
-//TODO replace with concepts
-    template<typename T>
-    class Iterator {
-    public:
-        std::optional<T> next() = 0;
-    };
+//
+//    This unused class represents an interface, that generic Iterator must implement.
+//
+//    template<typename T>
+//    class Iterator {
+//    public:
+//        using value_type = T;
+//        std::optional<T> next() = 0;
+//    };
+
 
     template<typename Iter, typename Func>
     class MapIterator {
@@ -24,11 +37,14 @@ namespace internal {
         Iter iter;
         Func func;
     public:
+        using value_type = decltype(func(std::declval<typename Iter::value_type>()));
+        static_assert(!std::is_reference<value_type>::value);
+        static_assert(std::is_invocable<Func, typename Iter::value_type>());
         MapIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
         auto next() {
             auto a = iter.next();
-            return a ? std::optional{func(*a)} : std::nullopt;
+            return a ? std::optional{func(std::move(*a))} : std::nullopt;
         }
     };
 
@@ -38,9 +54,12 @@ namespace internal {
         Iter iter;
         Func func;
     public:
+        using value_type = typename Iter::value_type;
+        static_assert(!std::is_reference<value_type>::value);
+        static_assert(std::is_invocable_r<bool, Func, value_type>::value);
         FilterIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
-        decltype(iter.next()) next() {
+        optional<value_type> next() {
             auto a = iter.next();
             return !a.has_value() ? std::nullopt :
                    func(*a) ? std::optional{*a} :
@@ -52,6 +71,7 @@ namespace internal {
     private:
         std::ifstream in;
     public:
+        using value_type = std::string;
         explicit FileLineIterator(std::string filename) : in{filename} {}
 
         FileLineIterator(FileLineIterator &&old) : in{std::move(old.in)} {}
@@ -75,11 +95,13 @@ namespace internal {
         ObsoleteIter _start;
         ObsoleteIter _end;
     public:
+        using value_type = typename std::iterator_traits<ObsoleteIter>::value_type;
+        static_assert(!std::is_reference<value_type>::value);
         ObsoleteIteratorConverter(ObsoleteIter&& start, ObsoleteIter&& ennd):_start{std::move(start)}, _end{std::move(ennd)}{}
-        auto next() {
+        optional<value_type> next() {
             return _start == _end ?
                 std::nullopt :
-                [&](){auto retVal = *_start; _start++; return std::optional{retVal};}();
+                [&](){auto retVal = std::move(*_start); _start++; return std::optional{std::move(retVal)};}();
         }
     };
 }
@@ -97,23 +119,18 @@ class I {
 private:
     std::optional<Iter> iter;
 
-    /**
-     * This function is hopefully pretty much useless, however it can be used to get the type of the iterator via decltype.
-     * Throws an exception, when the iterator is empty.
-     * @return first element of the iterator
-     */
-    auto first() {
-        assert(iter);
-        auto a = (*iter).next();
-        if (!a) {
-            throw "The iterator is empty!";
-        }
-        return *a;
-    }
-
 public:
     I(Iter &&iter) : iter{std::move(iter)} {}
 
+    using value_type = typename Iter::value_type;
+    static_assert(!std::is_reference<value_type>::value);
+
+    /**
+     * The function takes ownership of the data and returns it again.
+     * @tparam Func Function, which will take ownership of the data and return it again
+     * @param f
+     * @return
+     */
     template<typename Func>
     auto map(Func f) {
         assert(iter);
@@ -125,7 +142,7 @@ public:
     template<typename Func>
     auto lazyForEach(Func f) {
         assert(iter);
-        internal::MapIterator mi(std::move(*iter), [&f](auto p){f(p); return p;});
+        internal::MapIterator mi(std::move(*iter), [&f](value_type&& p){value_type const & r = p; f(r); return std::move(p);});
         iter.reset();
         return wrap_iter(std::move(mi));
     }
@@ -138,14 +155,14 @@ public:
         return wrap_iter(std::move(fi));
     }
 
-    auto next() {
+    optional<value_type> next() {
         assert(iter);
         return (*iter).next();
     }
 
     auto collect() {
         assert(iter);
-        std::vector<decltype(first())> result;
+        std::vector<value_type> result;
         while (auto a = (*iter).next()) result.push_back(*a);
         return result;
     }
