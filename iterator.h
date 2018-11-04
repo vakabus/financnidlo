@@ -30,6 +30,13 @@ namespace internal {
 //        std::optional<T> next() = 0;
 //    };
 
+    template <typename I>
+    struct is_iterator {
+        constexpr static bool value =
+                std::is_same<decltype(std::declval<I>().next()), std::optional<typename I::value_type>>::value &&  // return value of next and optional<value_type> match
+                !std::is_reference<typename I::value_type>::value; // value_type is not a reference
+    };
+
 
     template<typename Iter, typename Func>
     class MapIterator {
@@ -38,7 +45,7 @@ namespace internal {
         Func func;
     public:
         using value_type = decltype(func(std::declval<typename Iter::value_type>()));
-        static_assert(!std::is_reference<value_type>::value);
+        static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable<Func, typename Iter::value_type>());
         MapIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
@@ -55,7 +62,7 @@ namespace internal {
         Func func;
     public:
         using value_type = typename Iter::value_type;
-        static_assert(!std::is_reference<value_type>::value);
+        static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable_r<bool, Func, value_type>::value);
         FilterIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
@@ -97,6 +104,7 @@ namespace internal {
     public:
         using value_type = typename std::iterator_traits<ObsoleteIter>::value_type;
         static_assert(!std::is_reference<value_type>::value);
+        static_assert(std::is_same<decltype(_start), decltype(_start++)>::value);
         ObsoleteIteratorConverter(ObsoleteIter&& start, ObsoleteIter&& ennd):_start{std::move(start)}, _end{std::move(ennd)}{}
         optional<value_type> next() {
             return _start == _end ?
@@ -123,7 +131,7 @@ public:
     I(Iter &&iter) : iter{std::move(iter)} {}
 
     using value_type = typename Iter::value_type;
-    static_assert(!std::is_reference<value_type>::value);
+    static_assert(internal::is_iterator<Iter>::value);
 
     /**
      * The function takes ownership of the data and returns it again.
