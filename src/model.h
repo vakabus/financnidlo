@@ -5,6 +5,8 @@
 #include <string>
 #include <unordered_map>
 #include <sstream>
+#include <variant>
+#include <iostream>
 
 
 using std::string;
@@ -12,13 +14,7 @@ using std::unordered_map;
 using std::vector;
 
 namespace file_mapping {
-    class ConfigElement {
-    };
-
-    class Definition : public ConfigElement {
-    };
-
-    struct Person : public Definition {
+    struct Person {
         string name;
         vector<string> aliases;
 
@@ -27,7 +23,7 @@ namespace file_mapping {
         Person(Person &&old) : name{std::move(old.name)}, aliases{std::move(old.aliases)} {}
     };
 
-    struct Group : public Definition {
+    struct Group {
         string name;
         vector<string> mapsTo;
 
@@ -35,7 +31,7 @@ namespace file_mapping {
         Group(Group &other) = delete;
         Group(Group &&old) : name{std::move(old.name)}, mapsTo{std::move(old.mapsTo)} {}
     };
-    struct Currency : public Definition {
+    struct Currency {
         string name;
 
         Currency(string&& name):name{name}{}
@@ -47,14 +43,17 @@ namespace file_mapping {
 
     using CurrencyTransformation = std::pair<Value, Value>;
 
-    struct Transaction : ConfigElement{
+    struct Transaction {
         string paidBy;
         std::pair<double, string> value;
         vector<string> paidFor;
 
         Transaction(string &&paidBy, std::pair<double, string>&& value, vector<string>&& paidFor):paidBy{std::move(paidBy)}, value{std::move(value)}, paidFor{std::move(paidFor)} {}
         Transaction(Transaction& other) = delete;
+        Transaction(Transaction&& old): paidBy{std::move(old.paidBy)}, value{std::move(old.value)}, paidFor{std::move(old.paidFor)}{}
     };
+
+    using ConfigElement = std::variant<Person, Group, Currency, Transaction>;
 }
 
 namespace internal {
@@ -65,25 +64,33 @@ namespace internal {
         person_id_t last_id = static_cast<person_id_t>(-1);
         unordered_map<string, person_id_t> registry;
 
-        void add_name(string &name, person_id_t id) {
-            auto[_, success] = registry.insert({name, id});
+        void add_name(string &&name, person_id_t id) {
+            auto [col, success] = registry.insert({name, id});
             if (!success) {
-                std::ostringstream stringStream;
-                stringStream << "Person with name \"" << name << "\" is defined twice!";
-                throw stringStream.str();
+                std::cerr << "Person with name \"" << name << "\" is defined twice!" << std::endl;
+                std::cerr << "\tFirst time it was - " << std::get<0>(*col) << " with id " << std::get<1>(*col) << std::endl;
+                throw "Person definition occured for the second time with the same name";
             }
         }
 
-        person_id_t add_name_auto_id(string &name) {
+        person_id_t add_name_auto_id(string &&name) {
             last_id++;
-            add_name(name, last_id);
+            add_name(std::move(name), last_id);
             return last_id;
         }
 
     public:
-        void add_person(file_mapping::Person &person) {
-            auto id = add_name_auto_id(person.name);
-            for (auto alias : person.aliases) add_name(alias, id);
+        PersonIDRegister():registry{}{}
+        PersonIDRegister(PersonIDRegister& other) = delete;
+        PersonIDRegister(PersonIDRegister&& old) :last_id{std::move(old.last_id)},registry{std::move(old.registry)}{}
+        PersonIDRegister operator=(PersonIDRegister&& old) {
+            registry = std::move(old.registry);
+            last_id = std::move(old.last_id);
+            return std::move(*this);
+        }
+        void add_person(file_mapping::Person&& person) {
+            auto id = add_name_auto_id(std::move(person.name));
+            for (auto alias : person.aliases) add_name(std::move(alias), id);
         }
 
         person_id_t get_id(string &name) const {

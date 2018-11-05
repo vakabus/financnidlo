@@ -7,7 +7,8 @@ clean:
 	rm -f $(EXECUTABLE)
 
 buildDebug: src/main.cpp
-	g++ -std=c++17 -g -o $(EXECUTABLE) -Wall src/main.cpp
+	g++ -std=c++17 -g -o $(EXECUTABLE) -Wall -Wextra -pedantic -O0 -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer src/main.cpp
+	# 
 
 buildTest:
 	g++ -std=c++17 -g -o $(EXECUTABLE) -iquote src/ -Wall -lgtest -lgtest_main tests/main.cpp

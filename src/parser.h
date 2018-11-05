@@ -61,7 +61,9 @@ auto constexpr line_parser = [](std::vector<std::string>&& line) -> file_mapping
     if (line.at(0) == "def") {
         if (line.at(1) == "person") {
             auto name = line.at(2);
-            auto aliases = vector<string>{((line.begin()++)++)++, line.end()};
+            auto it = line.begin();
+            std::advance(it, 3);
+            auto aliases = vector<string>{it, line.end()};
             auto p = file_mapping::Person{std::move(name), std::move(aliases)};
             return std::move(p);
         } else if (line.at(1) == "group") {
@@ -82,7 +84,7 @@ auto constexpr line_parser = [](std::vector<std::string>&& line) -> file_mapping
         assert(line.at(1) == "->" && "invalid transaction - missing -> sign");
         auto value = parseValue(std::move(line.at(2)));
         vector<string> paidFor{((line.begin()++)++)++, line.end()};
-        auto t = file_mapping::Transaction{std::move(paidBy), std::move(value), std::move(paidFor)};
+        file_mapping::Transaction t{std::move(paidBy), std::move(value), std::move(paidFor)};
         return std::move(t);
     };
 };

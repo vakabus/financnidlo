@@ -181,10 +181,14 @@ public:
     }
 
     template<typename Func, typename State>
-    State fold(Func f, State s) {
+    State fold(Func f, State&& s) {
+        State ss = std::forward<State>(s);
         assert(iter);
-        while (auto a = iter->next()) s = f(a, s);
-        return s;
+        //static_assert(std::is_rvalue_reference<decltype(f(std::move(std::declval<typename Iter::value_type>()), ss))>::value);
+        while (auto a = iter->next()) {
+            f(std::move(*a), ss);
+        }
+        return ss;
     }
 };
 
