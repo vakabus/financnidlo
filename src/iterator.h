@@ -149,7 +149,7 @@ namespace internal {
     public:
         using value_type = typename Iter::value_type;
         static_assert(is_iterator<Iter>::value);
-        LimitIterator(Iter iter, usize limit) : iter{iter},limit{limit}{}
+        LimitIterator(Iter iter, usize limit) : limit{limit},iter{iter}{}
 
         optional<typename Iter::value_type> next() {
             if (count >= limit)
