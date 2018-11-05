@@ -7,6 +7,7 @@
 #include <iostream>
 #include <functional>
 #include <type_traits>
+#include "types.h"
 //#include <concepts>
 
 
@@ -30,10 +31,11 @@ namespace internal {
 //        std::optional<T> next() = 0;
 //    };
 
-    template <typename I>
+    template<typename I>
     struct is_iterator {
         constexpr static bool value =
-                std::is_same<decltype(std::declval<I>().next()), std::optional<typename I::value_type>>::value &&  // return value of next and optional<value_type> match
+                std::is_same<decltype(std::declval<I>().next()), std::optional<typename I::value_type>>::value &&
+                // return value of next and optional<value_type> match
                 !std::is_reference<typename I::value_type>::value; // value_type is not a reference
     };
 
@@ -47,6 +49,7 @@ namespace internal {
         using value_type = decltype(func(std::declval<typename Iter::value_type>()));
         static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable<Func, typename Iter::value_type>());
+
         MapIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
         auto next() {
@@ -64,6 +67,7 @@ namespace internal {
         using value_type = typename Iter::value_type;
         static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable_r<bool, Func, value_type>::value);
+
         FilterIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
 
         optional<value_type> next() {
@@ -79,6 +83,7 @@ namespace internal {
         std::ifstream in;
     public:
         using value_type = std::string;
+
         explicit FileLineIterator(std::string filename) : in{filename} {}
 
         FileLineIterator(FileLineIterator &&old) : in{std::move(old.in)} {}
@@ -96,8 +101,8 @@ namespace internal {
         }
     };
 
-    template <typename ObsoleteIter>
-    class  ObsoleteIteratorConverter {
+    template<typename ObsoleteIter>
+    class ObsoleteIteratorConverter {
     private:
         ObsoleteIter _start;
         ObsoleteIter _end;
@@ -105,13 +110,56 @@ namespace internal {
         using value_type = typename std::iterator_traits<ObsoleteIter>::value_type;
         static_assert(!std::is_reference<value_type>::value);
         static_assert(std::is_same<decltype(_start), decltype(_start++)>::value);
-        ObsoleteIteratorConverter(ObsoleteIter&& start, ObsoleteIter&& ennd):_start{std::move(start)}, _end{std::move(ennd)}{}
+
+        ObsoleteIteratorConverter(ObsoleteIter &&start, ObsoleteIter &&ennd) : _start{std::move(start)},
+                                                                               _end{std::move(ennd)} {}
+
         optional<value_type> next() {
             return _start == _end ?
-                std::nullopt :
-                [&](){auto retVal = std::move(*_start); _start++; return std::optional{std::move(retVal)};}();
+                   std::nullopt :
+                   [&]() {
+                       auto retVal = std::move(*_start);
+                       _start++;
+                       return std::optional{std::move(retVal)};
+                   }();
         }
     };
+
+    template<typename T>
+    class IncrementIter {
+    private:
+        T state;
+    public:
+        //TODO fixme check for T's validity
+        IncrementIter(T init) : state{std::move(init)} {}
+
+        using value_type = T;
+
+        optional<T> next() {
+            return state++;
+        }
+    };
+
+    template<typename Iter>
+    class LimitIterator {
+    private:
+        usize count = 0;
+        usize limit;
+        Iter iter;
+    public:
+        using value_type = typename Iter::value_type;
+        static_assert(is_iterator<Iter>::value);
+        LimitIterator(Iter iter, usize limit) : iter{iter},limit{limit}{}
+
+        optional<typename Iter::value_type> next() {
+            if (count >= limit)
+                return {};
+            count++;
+            return iter.next();
+        }
+    };
+
+
 }
 
 template<typename Iter>
@@ -124,13 +172,15 @@ I<Iter> wrap_iter(Iter &&iter) {
 
 template<typename Iter>
 class I {
+public:
+    using value_type = typename Iter::value_type;
 private:
     std::optional<Iter> iter;
+    std::optional<value_type> last_value_for_oldschool_iter = {};
 
 public:
     I(Iter &&iter) : iter{std::move(iter)} {}
 
-    using value_type = typename Iter::value_type;
     static_assert(internal::is_iterator<Iter>::value);
 
     /**
@@ -150,7 +200,11 @@ public:
     template<typename Func>
     auto lazyForEach(Func f) {
         assert(iter);
-        internal::MapIterator mi(std::move(*iter), [&f](value_type&& p){value_type const & r = p; f(r); return std::move(p);});
+        internal::MapIterator mi(std::move(*iter), [&f](value_type &&p) {
+            value_type const &r = p;
+            f(r);
+            return std::move(p);
+        });
         iter.reset();
         return wrap_iter(std::move(mi));
     }
@@ -180,8 +234,15 @@ public:
         while (iter->next()) {}
     }
 
+    auto take(usize count) {
+        assert(iter);
+        internal::LimitIterator li(std::move(*iter), count);
+        iter.reset();
+        return wrap_iter(std::move(li));
+    }
+
     template<typename Func, typename State>
-    State fold(Func f, State&& s) {
+    State fold(Func f, State &&s) {
         State ss = std::forward<State>(s);
         assert(iter);
         //static_assert(std::is_rvalue_reference<decltype(f(std::move(std::declval<typename Iter::value_type>()), ss))>::value);
@@ -190,6 +251,44 @@ public:
         }
         return ss;
     }
+
+    I &begin() {
+        last_value_for_oldschool_iter = next();
+        return *this;
+    }
+
+    value_type &operator*() {
+        if (last_value_for_oldschool_iter)
+            return *last_value_for_oldschool_iter;
+        else
+            throw std::range_error("Iterator range overrun!");
+    }
+
+    I& end() {
+        // cause the comparison operator will report ending when comparing with anything, we can just return any garbage
+        return *this;
+    }
+
+    void operator++() {
+        last_value_for_oldschool_iter = next();
+    }
+
+    /**
+     * Returns whether we run out of values. The comparison is otherwise useless, it's here just for compatibility
+     * reasons with the archaic C++ iterators.
+     */
+    template <typename T>
+    bool operator==(T & other) const {
+        return !last_value_for_oldschool_iter.has_value();
+    }
+
+    /**
+     * See the operator==
+     */
+    template <typename T>
+    bool operator!=(T& other) const {
+        return !(*this == other);
+    }
 };
 
 namespace Iter {
@@ -197,13 +296,22 @@ namespace Iter {
         return wrap_iter(internal::FileLineIterator(file));
     }
 
-    template <typename T>
-    auto from_vector(std::vector<T>&& vec) {
+    template<typename T>
+    auto from_vector(std::vector<T> &&vec) {
         return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
     }
 
-    template <typename T>
-    auto from_vector(std::vector<T>& vec) {
+    template<typename T>
+    auto from_vector(std::vector<T> &vec) {
         return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
+    }
+
+    template<typename T>
+    auto count_from(T init) {
+        return wrap_iter(internal::IncrementIter(init));
+    }
+
+    auto range(usize fromInclusive, usize toExclusive) {
+        return count_from(fromInclusive).take(toExclusive - fromInclusive);
     }
 }

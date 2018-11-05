@@ -2,4 +2,5 @@ def person Pepik pepik Pepca Josef josef p
 def person Jan honza Honzik Honza
 def currency usd
 def group all Pepik honza
-Pepik -> 66usd all
+Pepik paid 66usd for all
+all paid 500usd for Honzik
