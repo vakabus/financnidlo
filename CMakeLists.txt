@@ -12,5 +12,10 @@ add_executable(financnidlo6
         src/main.cpp
         src/model.h
         src/parser.h
-        src/types.h
+        src/types.h)
+
+add_executable(financnidlo6-test
+        tests/main.cpp
+        tests/test_iterator.h
         tests/test_parser.h)
+target_link_libraries(financnidlo6-test gtest gtest_main)

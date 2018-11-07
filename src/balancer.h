@@ -104,8 +104,7 @@ void handleGroup(State& state, file_mapping::Group g) {
 }
 
 
-auto constexpr advance_state = [](file_mapping::ConfigElement&& config, State& prevState) {
-    State& state = prevState;
+auto constexpr advance_state = [](file_mapping::ConfigElement&& config, State state) {
     std::visit([&state](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, file_mapping::Person>) {
@@ -115,4 +114,5 @@ auto constexpr advance_state = [](file_mapping::ConfigElement&& config, State& p
             } else
                 std::cout << "Something else" << std::endl;
         }, config);
+    return state;
 };
