@@ -84,7 +84,9 @@ namespace internal {
     public:
         using value_type = std::string;
 
-        explicit FileLineIterator(std::string filename) : in{filename} {}
+        explicit FileLineIterator(std::string filename) : in{filename} {
+            assert(in.good() && "Can't read the supplied file");
+        }
 
         FileLineIterator(FileLineIterator &&old) : in{std::move(old.in)} {}
 
