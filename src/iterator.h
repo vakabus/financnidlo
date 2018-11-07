@@ -200,10 +200,10 @@ public:
     template<typename Func>
     auto lazyForEach(Func f) {
         assert(iter);
-        internal::MapIterator mi(std::move(*iter), [&f](value_type &&p) {
+        internal::MapIterator mi(std::move(*iter), [=](value_type p) {
             value_type const &r = p;
             f(r);
-            return std::move(p);
+            return p;
         });
         iter.reset();
         return wrap_iter(std::move(mi));
@@ -312,5 +312,9 @@ namespace Iter {
 
     auto range(usize fromInclusive, usize toExclusive) {
         return count_from(fromInclusive).take(toExclusive - fromInclusive);
+    }
+
+    auto range(usize toExclusive) {
+        return count_from((usize)0).take(toExclusive);
     }
 }
