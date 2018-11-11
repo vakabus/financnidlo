@@ -200,7 +200,7 @@ public:
     }
 
     template<typename Func>
-    auto lazyForEach(Func f) {
+    auto lazy_for_each(Func f) {
         assert(iter);
         internal::MapIterator mi(std::move(*iter), [=](value_type p) {
             value_type const &r = p;

@@ -99,17 +99,6 @@ namespace internal {
         }
     };
 
-    struct Pays {
-        person_id_t to;
-        double amount;
-
-        Pays(person_id_t id, double a) : to{id}, amount{a} {}
-    };
-
-    struct Receives {
-        vector<person_id_t> from;
-    };
-
     using DebtVector = vector<double>;
     using CurrencyDebts = unordered_map<string, DebtVector>;
 };
@@ -120,7 +109,7 @@ public:
     internal::CurrencyDebts currencies;
     internal::IDRegister people;
 
-    State() : people{}, currencies{} {}
+    State() : currencies{}, people{} {}
 
     State(State& other) = delete;
 
@@ -138,7 +127,7 @@ public:
     }
 };
 
-void handlePerson(State &state, file_mapping::Person p) {
+void handle_def_person(State &state, file_mapping::Person p) {
     std::cout << "Registering person - " << p.name << std::endl;
     state.people.add_person(std::move(p));
 
@@ -148,12 +137,12 @@ void handlePerson(State &state, file_mapping::Person p) {
     }
 }
 
-void handleGroup(State &state, file_mapping::Group g) {
+void handle_def_group(State &state, file_mapping::Group g) {
     std::cout << "Registering group - " << g.name << std::endl;
     state.people.add_group(std::move(g));
 }
 
-void handleCurrency(State &state, file_mapping::Currency c) {
+void handle_def_currency(State &state, file_mapping::Currency c) {
     std::cout << "Registering currency - " << c.name << std::endl;
     auto n = state.people.get_number_of_people();
     auto p = internal::DebtVector(n);
@@ -179,7 +168,7 @@ std::unordered_set<internal::person_id_t> get_all_people(State const &state, vec
     return payees;
 }
 
-void handleTransaction(State &state, file_mapping::Transaction t) {
+void handle_transaction(State &state, file_mapping::Transaction t) {
     std::cout << "Transaction" << std::endl;
     auto payees = get_all_people(state, t.paidBy);
     auto receivers = get_all_people(state, t.paidFor);
@@ -199,17 +188,16 @@ void handleTransaction(State &state, file_mapping::Transaction t) {
 
 
 auto constexpr advance_state = [](file_mapping::ConfigElement &&config, State state) -> State {
-    std::cout << "Advance state..." << std::endl;
     std::visit([&state](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, file_mapping::Person>) {
-            handlePerson(state, std::move(arg));
+            handle_def_person(state, std::move(arg));
         } else if constexpr (std::is_same_v<T, file_mapping::Group>) {
-            handleGroup(state, std::move(arg));
+            handle_def_group(state, std::move(arg));
         } else if constexpr (std::is_same_v<T, file_mapping::Currency>) {
-            handleCurrency(state, std::move(arg));
+            handle_def_currency(state, std::move(arg));
         } else if constexpr (std::is_same_v<T, file_mapping::Transaction>) {
-            handleTransaction(state, std::move(arg));
+            handle_transaction(state, std::move(arg));
         } else {
             std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;
             abort();

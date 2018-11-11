@@ -17,7 +17,7 @@ TEST(IteratorTest, RangeFilterMapFold) {
 
 TEST(IteratorTest, LazyForEach) {
     usize sum = 0;
-    ASSERT_NO_FATAL_FAILURE(Iter::range(100).lazyForEach([&sum](auto const &i) { sum += i; }).exhaust());
+    ASSERT_NO_FATAL_FAILURE(Iter::range(100).lazy_for_each([&sum](auto const &i) { sum += i; }).exhaust());
     ASSERT_EQ(sum, 4950);
 }
 
