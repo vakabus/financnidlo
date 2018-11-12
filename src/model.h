@@ -50,6 +50,15 @@ namespace file_mapping {
         Transaction(vector<string> paidBy, std::pair<double, string> value, vector<string> paidFor):paidBy{std::move(paidBy)}, value{std::move(value)}, paidFor{std::move(paidFor)} {}
         Transaction(Transaction& other) = delete;
         Transaction(Transaction&& old): paidBy{std::move(old.paidBy)}, value{std::move(old.value)}, paidFor{std::move(old.paidFor)}{}
+
+        friend std::ostream &operator<<(std::ostream &out, const Transaction &transaction) {
+            for (auto p : transaction.paidBy)
+                out << p << " ";
+            out << "paid " << transaction.value.first << transaction.value.second << " for";
+            for (auto p : transaction.paidFor)
+                out << " " << p;
+            return out;
+        }
     };
 
     using ConfigElement = std::variant<Person, Group, Currency, Transaction>;

@@ -29,3 +29,8 @@ TEST(IteratorTest, FoldStatePassing) {
             (std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111})
     );
 }
+
+TEST(IteratorTest, ZipIterator) {
+    auto mapper = [](auto pair) {return pair.first;};
+    ASSERT_EQ(Iter::range(100).enumerate().map(mapper).sum(), 4950);
+}

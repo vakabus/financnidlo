@@ -16,11 +16,11 @@ namespace internal {
 
     class IDRegister {
     private:
-        person_id_t last_id = static_cast<person_id_t>(-1);
+        std::vector<std::string> canonicalPersonNames;
         unordered_map<string, person_id_t> registry;
         unordered_map<string, unordered_set<person_id_t>> groupRegistry;
 
-        void add_person_name(string name, person_id_t id) {
+        void add_person_alias(string name, person_id_t id) {
             auto[col, success] = registry.insert({name, id});
             if (!success) {
                 std::cerr << "Person with name \"" << name << "\" is defined twice!" << std::endl;
@@ -30,10 +30,11 @@ namespace internal {
             }
         }
 
-        person_id_t add_person_name_auto_id(string name) {
-            last_id++;
-            add_person_name(std::move(name), last_id);
-            return last_id;
+        person_id_t register_person(string name) {
+            canonicalPersonNames.push_back(name);
+            usize id = canonicalPersonNames.size() - 1;
+            add_person_alias(std::move(name), id);
+            return id;
         }
 
         unordered_set<person_id_t> &create_group_record(string name) {
@@ -51,22 +52,22 @@ namespace internal {
 
         IDRegister(IDRegister &other) = delete;
 
-        IDRegister(IDRegister &&old) : last_id{std::move(old.last_id)}, registry{std::move(old.registry)} {}
+        IDRegister(IDRegister &&old) : canonicalPersonNames{std::move(old.canonicalPersonNames)}, registry{std::move(old.registry)} {}
 
         IDRegister &operator=(IDRegister &&old) {
             std::swap(registry, old.registry);
             std::swap(groupRegistry, old.groupRegistry);
-            last_id = old.last_id;
+            std::swap(canonicalPersonNames, old.canonicalPersonNames);
             return *this;
         }
 
         void add_person(file_mapping::Person person) {
-            auto id = add_person_name_auto_id(std::move(person.name));
-            for (auto alias : person.aliases) add_person_name(std::move(alias), id);
+            auto id = register_person(std::move(person.name));
+            for (auto alias : person.aliases) add_person_alias(std::move(alias), id);
         }
 
         usize get_number_of_people() const {
-            return (usize) last_id + 1;
+            return canonicalPersonNames.size();
         }
 
         bool is_group(string &name) const {
@@ -79,6 +80,10 @@ namespace internal {
 
         unordered_set<person_id_t> const &get_group_members(string &name) const {
             return groupRegistry.at(name);
+        }
+
+        std::string const & get_canonical_person_name(const person_id_t id) const {
+            return canonicalPersonNames.at(id);
         }
 
         void add_group(file_mapping::Group group) {
@@ -101,7 +106,7 @@ namespace internal {
 
     using DebtVector = vector<double>;
     using CurrencyDebts = unordered_map<string, DebtVector>;
-};
+}
 
 class State {
 private:
@@ -113,12 +118,13 @@ public:
 
     State(State& other) = delete;
 
-    State(State&& old) {
+    State(State&& old) /*:currencies(std::move(old.currencies)), people(std::move(old.people))*/ {
         // TODO
         // WTF!!! This when get rid of the swaps and put the initialization up into the construction definition,
         // the state passing in iterators stops working
         std::swap(currencies, old.currencies);
         std::swap(people, old.people);
+
     }
     State &operator=(State &&old) {
         std::swap(currencies, old.currencies);

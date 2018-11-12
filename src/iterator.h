@@ -151,13 +151,38 @@ namespace internal {
     public:
         using value_type = typename Iter::value_type;
         static_assert(is_iterator<Iter>::value);
-        LimitIterator(Iter iter, usize limit) : limit{limit},iter{iter}{}
+
+        LimitIterator(Iter iter, usize limit) : limit{limit}, iter{iter} {}
 
         optional<typename Iter::value_type> next() {
             if (count >= limit)
                 return {};
             count++;
             return iter.next();
+        }
+    };
+
+    template<typename Iter1, typename Iter2>
+    class ZipIterator {
+    private:
+        Iter1 iter1;
+        Iter2 iter2;
+    public:
+        static_assert(is_iterator<Iter1>::value);
+        static_assert(is_iterator<Iter2>::value);
+        using value_type = std::pair<typename Iter1::value_type, typename Iter2::value_type>;
+
+        ZipIterator(Iter1 iter1, Iter2 iter2) : iter1{std::move(iter1)}, iter2{std::move(iter2)} {}
+
+        optional<value_type> next() {
+            auto a = iter1.next();
+            auto b = iter2.next();
+
+            if (a && b) {
+                return optional(std::pair{*a, *b});
+            } else {
+                return std::nullopt;
+            }
         }
     };
 
@@ -265,7 +290,7 @@ public:
             throw std::range_error("Iterator range overrun!");
     }
 
-    I& end() {
+    I &end() {
         // cause the comparison operator will report ending when comparing with anything, we can just return any garbage
         return *this;
     }
@@ -278,35 +303,36 @@ public:
      * Returns whether we run out of values. The comparison is otherwise useless, it's here just for compatibility
      * reasons with the archaic C++ iterators.
      */
-    template <typename T>
-    bool operator==(T & other) const {
+    template<typename T>
+    bool operator==(T &other) const {
         return !last_value_for_oldschool_iter.has_value();
     }
 
     /**
      * See the operator==
      */
-    template <typename T>
-    bool operator!=(T& other) const {
+    template<typename T>
+    bool operator!=(T &other) const {
         return !(*this == other);
+    }
+
+    auto enumerate() {
+        assert(iter);
+        return wrap_iter(internal::ZipIterator(internal::IncrementIter((usize) 0), std::move(*iter)));
+    }
+
+    auto sum() {
+        assert(iter);
+        return fold([](auto v, auto s) { return v + s; }, 0);
+    }
+
+    auto sum(typename Iter::value_type initialValue) {
+        assert(iter);
+        return fold([](auto v, auto s) { return v + s; }, initialValue);
     }
 };
 
 namespace Iter {
-    auto file_by_lines(std::string file) {
-        return wrap_iter(internal::FileLineIterator(file));
-    }
-
-    template<typename T>
-    auto from_vector(std::vector<T> &&vec) {
-        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
-    }
-
-    template<typename T>
-    auto from_vector(std::vector<T> &vec) {
-        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
-    }
-
     template<typename T>
     auto count_from(T init) {
         return wrap_iter(internal::IncrementIter(init));
@@ -317,6 +343,27 @@ namespace Iter {
     }
 
     auto range(usize toExclusive) {
-        return count_from((usize)0).take(toExclusive);
+        return count_from((usize) 0).take(toExclusive);
+    }
+
+    auto file_by_lines(std::string file) {
+        return wrap_iter(internal::FileLineIterator(file));
+    }
+
+    template<typename Iter1, typename Iter2>
+    auto zip(Iter1 iter1, Iter2 iter2) {
+        static_assert(internal::is_iterator<Iter1>::value);
+        static_assert(internal::is_iterator<Iter2>::value);
+        return wrap_iter(internal::ZipIterator(iter1, iter2));
+    }
+
+    template<typename Container>
+    auto from(Container &&vec) {
+        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
+    }
+
+    template<typename Container>
+    auto from(Container &vec) {
+        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
     }
 }
