@@ -8,12 +8,11 @@
 #include <variant>
 #include <iostream>
 
-
 using std::string;
 using std::unordered_map;
 using std::vector;
 
-namespace file_mapping {
+namespace model {
     struct Person {
         string name;
         vector<string> aliases;

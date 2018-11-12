@@ -8,19 +8,17 @@
 #include <functional>
 #include <type_traits>
 #include "types.h"
-//#include <concepts>
 
 
-using std::optional;
 
 //template<typename T>
 //concept bool Iterator = requires(T a) {
 //typename T::value_type;
 //
-//{ a.next() } -> std::optional<typename T::value_type>;
+//{ a.next() } -> optional<typename T::value_type>;
 //};
 
-namespace internal {
+namespace {
 //
 //    This unused class represents an interface, that generic Iterator must implement.
 //
@@ -28,13 +26,13 @@ namespace internal {
 //    class Iterator {
 //    public:
 //        using value_type = T;
-//        std::optional<T> next() = 0;
+//        optional<T> next() = 0;
 //    };
 
     template<typename I>
     struct is_iterator {
         constexpr static bool value =
-                std::is_same<decltype(std::declval<I>().next()), std::optional<typename I::value_type>>::value &&
+                std::is_same<decltype(std::declval<I>().next()), optional<typename I::value_type>>::value &&
                 // return value of next and optional<value_type> match
                 !std::is_reference<typename I::value_type>::value; // value_type is not a reference
     };
@@ -54,7 +52,7 @@ namespace internal {
 
         auto next() {
             auto a = iter.next();
-            return a ? std::optional{func(std::move(*a))} : std::nullopt;
+            return a ? optional{func(std::move(*a))} : std::nullopt;
         }
     };
 
@@ -73,7 +71,7 @@ namespace internal {
         optional<value_type> next() {
             auto a = iter.next();
             return !a.has_value() ? std::nullopt :
-                   func(*a) ? std::optional{*a} :
+                   func(*a) ? optional{*a} :
                    next();
         }
     };
@@ -92,13 +90,13 @@ namespace internal {
 
         FileLineIterator(const FileLineIterator &old) = delete;
 
-        std::optional<std::string> next() {
+        optional<std::string> next() {
             if (in.eof() || in.fail() || in.bad()) {
                 return std::nullopt;
             } else {
                 std::string line;
                 std::getline(in, line);
-                return std::optional<std::string>{line};
+                return optional<std::string>{line};
             }
         }
     };
@@ -122,7 +120,7 @@ namespace internal {
                    [&]() {
                        auto retVal = std::move(*_start);
                        _start++;
-                       return std::optional{std::move(retVal)};
+                       return optional{std::move(retVal)};
                    }();
         }
     };
@@ -197,18 +195,20 @@ I<Iter> wrap_iter(Iter &&iter) {
     return I(std::move(iter));
 }
 
+struct IOldIteratorEnd {};
+
 template<typename Iter>
 class I {
 public:
     using value_type = typename Iter::value_type;
 private:
-    std::optional<Iter> iter;
-    std::optional<value_type> last_value_for_oldschool_iter = {};
+    optional<Iter> iter;
+    optional<value_type> last_value_for_oldschool_iter = {};
 
 public:
     I(Iter &&iter) : iter{std::move(iter)} {}
 
-    static_assert(internal::is_iterator<Iter>::value);
+    static_assert(is_iterator<Iter>::value);
 
     /**
      * The function takes ownership of the data and returns it again.
@@ -219,7 +219,7 @@ public:
     template<typename Func>
     auto map(Func f) {
         assert(iter);
-        internal::MapIterator<Iter, Func> mi(std::move(*iter), f);
+        MapIterator<Iter, Func> mi(std::move(*iter), f);
         iter.reset();
         return wrap_iter(std::move(mi));
     }
@@ -227,7 +227,7 @@ public:
     template<typename Func>
     auto lazy_for_each(Func f) {
         assert(iter);
-        internal::MapIterator mi(std::move(*iter), [=](value_type p) {
+        MapIterator mi(std::move(*iter), [=](value_type p) {
             value_type const &r = p;
             f(r);
             return p;
@@ -239,7 +239,7 @@ public:
     template<typename Func>
     auto filter(Func f) {
         assert(iter);
-        internal::FilterIterator<Iter, Func> fi(std::move(*iter), f);
+        FilterIterator<Iter, Func> fi(std::move(*iter), f);
         iter.reset();
         return wrap_iter(std::move(fi));
     }
@@ -263,7 +263,7 @@ public:
 
     auto take(usize count) {
         assert(iter);
-        internal::LimitIterator li(std::move(*iter), count);
+        LimitIterator li(std::move(*iter), count);
         iter.reset();
         return wrap_iter(std::move(li));
     }
@@ -290,9 +290,9 @@ public:
             throw std::range_error("Iterator range overrun!");
     }
 
-    I &end() {
+    IOldIteratorEnd end() {
         // cause the comparison operator will report ending when comparing with anything, we can just return any garbage
-        return *this;
+        return IOldIteratorEnd{};
     }
 
     void operator++() {
@@ -303,22 +303,20 @@ public:
      * Returns whether we run out of values. The comparison is otherwise useless, it's here just for compatibility
      * reasons with the archaic C++ iterators.
      */
-    template<typename T>
-    bool operator==(T &other) const {
+    bool operator==(IOldIteratorEnd &other) const {
         return !last_value_for_oldschool_iter.has_value();
     }
 
     /**
      * See the operator==
      */
-    template<typename T>
-    bool operator!=(T &other) const {
+    bool operator!=(IOldIteratorEnd &other) const {
         return !(*this == other);
     }
 
     auto enumerate() {
         assert(iter);
-        return wrap_iter(internal::ZipIterator(internal::IncrementIter((usize) 0), std::move(*iter)));
+        return wrap_iter(ZipIterator(IncrementIter((usize) 0), std::move(*iter)));
     }
 
     auto sum() {
@@ -335,7 +333,7 @@ public:
 namespace Iter {
     template<typename T>
     auto count_from(T init) {
-        return wrap_iter(internal::IncrementIter(init));
+        return wrap_iter(IncrementIter(init));
     }
 
     auto range(usize fromInclusive, usize toExclusive) {
@@ -347,23 +345,23 @@ namespace Iter {
     }
 
     auto file_by_lines(std::string file) {
-        return wrap_iter(internal::FileLineIterator(file));
+        return wrap_iter(FileLineIterator(file));
     }
 
     template<typename Iter1, typename Iter2>
     auto zip(Iter1 iter1, Iter2 iter2) {
-        static_assert(internal::is_iterator<Iter1>::value);
-        static_assert(internal::is_iterator<Iter2>::value);
-        return wrap_iter(internal::ZipIterator(iter1, iter2));
+        static_assert(is_iterator<Iter1>::value);
+        static_assert(is_iterator<Iter2>::value);
+        return wrap_iter(ZipIterator(iter1, iter2));
     }
 
     template<typename Container>
     auto from(Container &&vec) {
-        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
+        return wrap_iter(ObsoleteIteratorConverter(vec.begin(), vec.end()));
     }
 
     template<typename Container>
     auto from(Container &vec) {
-        return wrap_iter(internal::ObsoleteIteratorConverter(vec.begin(), vec.end()));
+        return wrap_iter(ObsoleteIteratorConverter(vec.begin(), vec.end()));
     }
 }

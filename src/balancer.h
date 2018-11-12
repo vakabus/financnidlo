@@ -61,7 +61,7 @@ namespace internal {
             return *this;
         }
 
-        void add_person(file_mapping::Person person) {
+        void add_person(model::Person person) {
             auto id = register_person(std::move(person.name));
             for (auto alias : person.aliases) add_person_alias(std::move(alias), id);
         }
@@ -86,7 +86,7 @@ namespace internal {
             return canonicalPersonNames.at(id);
         }
 
-        void add_group(file_mapping::Group group) {
+        void add_group(model::Group group) {
             //TODO What to do, when group contains itself?
             //TODO What to do, when member is defined multiple times? Currently we ignore it.
             auto &g = create_group_record(group.name);
@@ -133,8 +133,7 @@ public:
     }
 };
 
-void handle_def_person(State &state, file_mapping::Person p) {
-    std::cout << "Registering person - " << p.name << std::endl;
+void handle_def_person(State &state, model::Person p) {
     state.people.add_person(std::move(p));
 
     // add the person to each currency debt vector
@@ -143,13 +142,11 @@ void handle_def_person(State &state, file_mapping::Person p) {
     }
 }
 
-void handle_def_group(State &state, file_mapping::Group g) {
-    std::cout << "Registering group - " << g.name << std::endl;
+void handle_def_group(State &state, model::Group g) {
     state.people.add_group(std::move(g));
 }
 
-void handle_def_currency(State &state, file_mapping::Currency c) {
-    std::cout << "Registering currency - " << c.name << std::endl;
+void handle_def_currency(State &state, model::Currency c) {
     auto n = state.people.get_number_of_people();
     auto p = internal::DebtVector(n);
     auto[col, success] = state.currencies.insert({c.name, std::move(p)});
@@ -174,8 +171,7 @@ std::unordered_set<internal::person_id_t> get_all_people(State const &state, vec
     return payees;
 }
 
-void handle_transaction(State &state, file_mapping::Transaction t) {
-    std::cout << "Transaction" << std::endl;
+void handle_transaction(State &state, model::Transaction t) {
     auto payees = get_all_people(state, t.paidBy);
     auto receivers = get_all_people(state, t.paidFor);
     auto &debtVector = state.currencies.at(t.value.second);
@@ -193,16 +189,16 @@ void handle_transaction(State &state, file_mapping::Transaction t) {
 }
 
 
-auto constexpr advance_state = [](file_mapping::ConfigElement &&config, State state) -> State {
+auto constexpr advance_state = [](model::ConfigElement &&config, State state) -> State {
     std::visit([&state](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, file_mapping::Person>) {
+        if constexpr (std::is_same_v<T, model::Person>) {
             handle_def_person(state, std::move(arg));
-        } else if constexpr (std::is_same_v<T, file_mapping::Group>) {
+        } else if constexpr (std::is_same_v<T, model::Group>) {
             handle_def_group(state, std::move(arg));
-        } else if constexpr (std::is_same_v<T, file_mapping::Currency>) {
+        } else if constexpr (std::is_same_v<T, model::Currency>) {
             handle_def_currency(state, std::move(arg));
-        } else if constexpr (std::is_same_v<T, file_mapping::Transaction>) {
+        } else if constexpr (std::is_same_v<T, model::Transaction>) {
             handle_transaction(state, std::move(arg));
         } else {
             std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;

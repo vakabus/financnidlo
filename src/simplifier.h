@@ -16,8 +16,8 @@ struct SimpleTransaction {
     double amount;
     internal::person_id_t paidTo;
 
-    file_mapping::Transaction to_full_transaction(internal::IDRegister &idRegister, string currency) {
-        return file_mapping::Transaction(std::vector{idRegister.get_canonical_person_name(paidBy)},
+    model::Transaction to_full_transaction(internal::IDRegister &idRegister, string currency) {
+        return model::Transaction(std::vector{idRegister.get_canonical_person_name(paidBy)},
                                          std::pair{amount, std::move(currency)},
                                          std::vector{idRegister.get_canonical_person_name(paidTo)});
     }
@@ -34,7 +34,7 @@ public:
         }
     }
 
-    std::optional<SimpleTransaction> next() {
+    optional<SimpleTransaction> next() {
         // check if we should do something
         bool shouldGenerateSomething = false;
         for (auto d : debtVector) {
