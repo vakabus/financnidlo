@@ -26,14 +26,14 @@ struct SimpleTransaction {
 class SimplifiedTransactionGenerator {
 private:
     std::vector<double> debtVector;
-public:
-    using value_type = SimpleTransaction;
-
-    SimplifiedTransactionGenerator(vector<double> debtVector) : debtVector(move(debtVector)) {
+    SimplifiedTransactionGenerator(vector<double> &&debtVector) : debtVector(move(debtVector)) {
         if (this->debtVector.size() < 2) {
             throw std::logic_error("Does not make sense to generate transactions for so few people!");
         }
     }
+public:
+
+    using value_type = SimpleTransaction;
 
     SimplifiedTransactionGenerator(SimplifiedTransactionGenerator &other) = delete;
 
@@ -43,7 +43,7 @@ public:
 
     optional<SimpleTransaction> next() {
         // check if we should do something
-        if (Iter::from(debtVector).map([](auto d) { return std::abs(d); }).sum() < 0.001)
+        if (Iter::from(debtVector).map([](auto d) { return std::abs(d); }).max() < 0.001)
             return nullopt;
 
         // greedy algo, take the maximal debtor and maximal loaner and create a transaction between them
@@ -63,5 +63,9 @@ public:
         trans.paidTo = debtor;
 
         return trans;
+    }
+
+    static I<SimplifiedTransactionGenerator> create(vector<double> &&debtVector) {
+        return wrap_iter(SimplifiedTransactionGenerator(move(debtVector)));
     }
 };

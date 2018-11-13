@@ -10,7 +10,6 @@
 #include "types.h"
 
 
-
 //template<typename T>
 //concept bool Iterator = requires(T a) {
 //typename T::value_type;
@@ -36,7 +35,6 @@ namespace {
                 // return value of next and optional<value_type> match
                 !std::is_reference<typename I::value_type>::value; // value_type is not a reference
     };
-
 
     template<typename Iter, typename Func>
     class MapIterator {
@@ -82,7 +80,7 @@ namespace {
     public:
         using value_type = std::string;
 
-        explicit FileLineIterator(std::string&& filename) : in{move(filename)} {
+        explicit FileLineIterator(std::string &&filename) : in{move(filename)} {
             assert(in.good() && "Can't read the supplied file");
         }
 
@@ -195,7 +193,8 @@ I<Iter> wrap_iter(Iter &&iter) {
     return I(move(iter));
 }
 
-struct IOldIteratorEnd {};
+struct IOldIteratorEnd {
+};
 
 template<typename Iter>
 class I {
@@ -280,7 +279,8 @@ public:
 
     template<typename Func>
     optional<typename Iter::value_type> reduce(Func &&f) {
-        static_assert(std::is_same_v<typename Iter::value_type, decltype(f(std::declval<typename Iter::value_type>(), std::declval<typename Iter::value_type>()))>);
+        static_assert(std::is_same_v<typename Iter::value_type, decltype(f(std::declval<typename Iter::value_type>(),
+                                                                           std::declval<typename Iter::value_type>()))>);
         assert(iter);
         auto first = iter->next();
         if (!first) {
@@ -333,7 +333,7 @@ public:
 
     auto sum() {
         assert(iter);
-        return fold([](auto v, auto s) { return v + s; }, (usize)0);
+        return fold([](auto v, auto s) { return v + s; }, (usize) 0);
     }
 
     auto sum(typename Iter::value_type initialValue) {
@@ -343,32 +343,30 @@ public:
 
     optional<typename Iter::value_type> max() {
         assert(iter);
-        return reduce([](auto a, auto b){ return a > b ? a : b;});
+        return reduce([](auto a, auto b) { return a > b ? a : b; });
     }
 
-    template <typename Func>
+    template<typename Func>
     optional<typename Iter::value_type> max_by(Func &&f) {
         assert(iter);
-        return reduce([=](auto a, auto b){ return f(a) > f(b) ? a : b;});
+        return reduce([=](auto a, auto b) { return f(a) > f(b) ? a : b; });
     }
 
     optional<typename Iter::value_type> min() {
         assert(iter);
-        return reduce([](auto a, auto b){ return a < b ? a : b;});
+        return reduce([](auto a, auto b) { return a < b ? a : b; });
     }
 
-    template <typename Func>
+    template<typename Func>
     optional<typename Iter::value_type> min_by(Func &&f) {
         assert(iter);
-        return reduce([=](auto a, auto b){ return f(a) < f(b) ? a : b;});
+        return reduce([=](auto a, auto b) { return f(a) < f(b) ? a : b; });
     }
-
-
 };
 
 namespace Iter {
     template<typename T>
-    auto count_from(T&& init) {
+    auto count_from(T &&init) {
         return wrap_iter(IncrementIter(move(init)));
     }
 
@@ -380,7 +378,7 @@ namespace Iter {
         return count_from((usize) 0).take(toExclusive);
     }
 
-    auto file_by_lines(std::string&& file) {
+    auto file_by_lines(std::string &&file) {
         return wrap_iter(FileLineIterator(move(file)));
     }
 
