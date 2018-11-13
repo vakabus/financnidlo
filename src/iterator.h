@@ -48,11 +48,11 @@ namespace {
         static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable<Func, typename Iter::value_type>());
 
-        MapIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
+        MapIterator(Iter &&a, Func &&b) : iter{move(a)}, func{move(b)} {}
 
         auto next() {
             auto a = iter.next();
-            return a ? optional{func(std::move(*a))} : std::nullopt;
+            return a ? optional{func(move(*a))} : nullopt;
         }
     };
 
@@ -66,11 +66,11 @@ namespace {
         static_assert(is_iterator<Iter>::value);
         static_assert(std::is_invocable_r<bool, Func, value_type>::value);
 
-        FilterIterator(Iter &&a, Func b) : iter{std::move(a)}, func{b} {}
+        FilterIterator(Iter &&a, Func &&b) : iter{move(a)}, func{std::move(b)} {}
 
         optional<value_type> next() {
             auto a = iter.next();
-            return !a.has_value() ? std::nullopt :
+            return !a.has_value() ? nullopt :
                    func(*a) ? optional{*a} :
                    next();
         }
@@ -82,17 +82,17 @@ namespace {
     public:
         using value_type = std::string;
 
-        explicit FileLineIterator(std::string filename) : in{filename} {
+        explicit FileLineIterator(std::string&& filename) : in{move(filename)} {
             assert(in.good() && "Can't read the supplied file");
         }
 
-        FileLineIterator(FileLineIterator &&old) : in{std::move(old.in)} {}
+        FileLineIterator(FileLineIterator &&old) : in{move(old.in)} {}
 
         FileLineIterator(const FileLineIterator &old) = delete;
 
         optional<std::string> next() {
             if (in.eof() || in.fail() || in.bad()) {
-                return std::nullopt;
+                return nullopt;
             } else {
                 std::string line;
                 std::getline(in, line);
@@ -111,16 +111,16 @@ namespace {
         static_assert(!std::is_reference<value_type>::value);
         static_assert(std::is_same<decltype(_start), decltype(_start++)>::value);
 
-        ObsoleteIteratorConverter(ObsoleteIter &&start, ObsoleteIter &&ennd) : _start{std::move(start)},
-                                                                               _end{std::move(ennd)} {}
+        ObsoleteIteratorConverter(ObsoleteIter &&start, ObsoleteIter &&ennd) : _start{move(start)},
+                                                                               _end{move(ennd)} {}
 
         optional<value_type> next() {
             return _start == _end ?
-                   std::nullopt :
+                   nullopt :
                    [&]() {
-                       auto retVal = std::move(*_start);
+                       auto retVal = move(*_start);
                        _start++;
-                       return optional{std::move(retVal)};
+                       return optional{move(retVal)};
                    }();
         }
     };
@@ -131,7 +131,7 @@ namespace {
         T state;
     public:
         //TODO fixme check for T's validity
-        IncrementIter(T init) : state{std::move(init)} {}
+        IncrementIter(T &&init) : state{move(init)} {}
 
         using value_type = T;
 
@@ -150,7 +150,7 @@ namespace {
         using value_type = typename Iter::value_type;
         static_assert(is_iterator<Iter>::value);
 
-        LimitIterator(Iter iter, usize limit) : limit{limit}, iter{iter} {}
+        LimitIterator(Iter &&iter, usize limit) : limit{limit}, iter{iter} {}
 
         optional<typename Iter::value_type> next() {
             if (count >= limit)
@@ -170,7 +170,7 @@ namespace {
         static_assert(is_iterator<Iter2>::value);
         using value_type = std::pair<typename Iter1::value_type, typename Iter2::value_type>;
 
-        ZipIterator(Iter1 iter1, Iter2 iter2) : iter1{std::move(iter1)}, iter2{std::move(iter2)} {}
+        ZipIterator(Iter1 &&iter1, Iter2 &&iter2) : iter1{move(iter1)}, iter2{move(iter2)} {}
 
         optional<value_type> next() {
             auto a = iter1.next();
@@ -179,7 +179,7 @@ namespace {
             if (a && b) {
                 return optional(std::pair{*a, *b});
             } else {
-                return std::nullopt;
+                return nullopt;
             }
         }
     };
@@ -192,7 +192,7 @@ class I;
 
 template<typename Iter>
 I<Iter> wrap_iter(Iter &&iter) {
-    return I(std::move(iter));
+    return I(move(iter));
 }
 
 struct IOldIteratorEnd {};
@@ -206,7 +206,7 @@ private:
     optional<value_type> last_value_for_oldschool_iter = {};
 
 public:
-    I(Iter &&iter) : iter{std::move(iter)} {}
+    I(Iter &&iter) : iter{move(iter)} {}
 
     static_assert(is_iterator<Iter>::value);
 
@@ -217,31 +217,31 @@ public:
      * @return
      */
     template<typename Func>
-    auto map(Func f) {
+    auto map(Func &&f) {
         assert(iter);
-        MapIterator<Iter, Func> mi(std::move(*iter), f);
+        MapIterator<Iter, Func> mi(move(*iter), move(f));
         iter.reset();
-        return wrap_iter(std::move(mi));
+        return wrap_iter(move(mi));
     }
 
     template<typename Func>
-    auto lazy_for_each(Func f) {
+    auto lazy_for_each(Func &&f) {
         assert(iter);
-        MapIterator mi(std::move(*iter), [=](value_type p) {
+        MapIterator mi(move(*iter), [=](value_type p) {
             value_type const &r = p;
             f(r);
             return p;
         });
         iter.reset();
-        return wrap_iter(std::move(mi));
+        return wrap_iter(move(mi));
     }
 
     template<typename Func>
-    auto filter(Func f) {
+    auto filter(Func &&f) {
         assert(iter);
-        FilterIterator<Iter, Func> fi(std::move(*iter), f);
+        FilterIterator<Iter, Func> fi(move(*iter), f);
         iter.reset();
-        return wrap_iter(std::move(fi));
+        return wrap_iter(move(fi));
     }
 
     optional<value_type> next() {
@@ -263,19 +263,31 @@ public:
 
     auto take(usize count) {
         assert(iter);
-        LimitIterator li(std::move(*iter), count);
+        LimitIterator li(move(*iter), count);
         iter.reset();
-        return wrap_iter(std::move(li));
+        return wrap_iter(move(li));
     }
 
     template<typename Func, typename State>
-    State fold(Func f, State s) {
+    State fold(Func &&f, State &&s) {
         assert(iter);
         while (auto a = iter->next()) {
-            State ss = f(std::move(*a), std::move(s));
-            s = std::move(ss);
+            State ss = f(move(*a), move(s));
+            s = move(ss);
         }
-        return s;
+        return move(s);
+    }
+
+    template<typename Func>
+    optional<typename Iter::value_type> reduce(Func &&f) {
+        static_assert(std::is_same_v<typename Iter::value_type, decltype(f(std::declval<typename Iter::value_type>(), std::declval<typename Iter::value_type>()))>);
+        assert(iter);
+        auto first = iter->next();
+        if (!first) {
+            return nullopt;
+        }
+
+        return optional{fold(move(f), move(*first))};
     }
 
     I &begin() {
@@ -316,24 +328,48 @@ public:
 
     auto enumerate() {
         assert(iter);
-        return wrap_iter(ZipIterator(IncrementIter((usize) 0), std::move(*iter)));
+        return wrap_iter(ZipIterator(IncrementIter((usize) 0), move(*iter)));
     }
 
     auto sum() {
         assert(iter);
-        return fold([](auto v, auto s) { return v + s; }, 0);
+        return fold([](auto v, auto s) { return v + s; }, (usize)0);
     }
 
     auto sum(typename Iter::value_type initialValue) {
         assert(iter);
         return fold([](auto v, auto s) { return v + s; }, initialValue);
     }
+
+    optional<typename Iter::value_type> max() {
+        assert(iter);
+        return reduce([](auto a, auto b){ return a > b ? a : b;});
+    }
+
+    template <typename Func>
+    optional<typename Iter::value_type> max_by(Func &&f) {
+        assert(iter);
+        return reduce([=](auto a, auto b){ return f(a) > f(b) ? a : b;});
+    }
+
+    optional<typename Iter::value_type> min() {
+        assert(iter);
+        return reduce([](auto a, auto b){ return a < b ? a : b;});
+    }
+
+    template <typename Func>
+    optional<typename Iter::value_type> min_by(Func &&f) {
+        assert(iter);
+        return reduce([=](auto a, auto b){ return f(a) < f(b) ? a : b;});
+    }
+
+
 };
 
 namespace Iter {
     template<typename T>
-    auto count_from(T init) {
-        return wrap_iter(IncrementIter(init));
+    auto count_from(T&& init) {
+        return wrap_iter(IncrementIter(move(init)));
     }
 
     auto range(usize fromInclusive, usize toExclusive) {
@@ -344,15 +380,15 @@ namespace Iter {
         return count_from((usize) 0).take(toExclusive);
     }
 
-    auto file_by_lines(std::string file) {
-        return wrap_iter(FileLineIterator(file));
+    auto file_by_lines(std::string&& file) {
+        return wrap_iter(FileLineIterator(move(file)));
     }
 
     template<typename Iter1, typename Iter2>
-    auto zip(Iter1 iter1, Iter2 iter2) {
+    auto zip(Iter1 &&iter1, Iter2 &&iter2) {
         static_assert(is_iterator<Iter1>::value);
         static_assert(is_iterator<Iter2>::value);
-        return wrap_iter(ZipIterator(iter1, iter2));
+        return wrap_iter(ZipIterator(move(iter1), move(iter2)));
     }
 
     template<typename Container>

@@ -19,16 +19,16 @@ namespace model {
 
         Person(string name, vector<string> aliases) : name{name}, aliases{aliases} {}
         Person(Person &other) = delete;
-        Person(Person &&old) : name{std::move(old.name)}, aliases{std::move(old.aliases)} {}
+        Person(Person &&old) : name{move(old.name)}, aliases{move(old.aliases)} {}
     };
 
     struct Group {
         string name;
         vector<string> mapsTo;
 
-        Group(string &&name, vector<string> &&mapsTo) : name{std::move(name)}, mapsTo{std::move(mapsTo)} {}
+        Group(string &&name, vector<string> &&mapsTo) : name{move(name)}, mapsTo{move(mapsTo)} {}
         Group(Group &other) = delete;
-        Group(Group &&old) : name{std::move(old.name)}, mapsTo{std::move(old.mapsTo)} {}
+        Group(Group &&old) : name{move(old.name)}, mapsTo{move(old.mapsTo)} {}
     };
     struct Currency {
         string name;
@@ -46,9 +46,9 @@ namespace model {
         std::pair<double, string> value;
         vector<string> paidFor;
 
-        Transaction(vector<string> paidBy, std::pair<double, string> value, vector<string> paidFor):paidBy{std::move(paidBy)}, value{std::move(value)}, paidFor{std::move(paidFor)} {}
+        Transaction(vector<string> paidBy, std::pair<double, string> value, vector<string> paidFor):paidBy{move(paidBy)}, value{move(value)}, paidFor{move(paidFor)} {}
         Transaction(Transaction& other) = delete;
-        Transaction(Transaction&& old): paidBy{std::move(old.paidBy)}, value{std::move(old.value)}, paidFor{std::move(old.paidFor)}{}
+        Transaction(Transaction&& old): paidBy{move(old.paidBy)}, value{move(old.value)}, paidFor{move(old.paidFor)}{}
 
         friend std::ostream &operator<<(std::ostream &out, const Transaction &transaction) {
             for (auto p : transaction.paidBy)

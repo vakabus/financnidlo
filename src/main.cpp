@@ -14,10 +14,11 @@ int main() {
             .fold(advance_state, State());
 
     for (auto&[currency, debtVector] : result.currencies) {
-        wrap_iter(SimplifiedTransactionGenerator(std::move(debtVector)))
+        wrap_iter(SimplifiedTransactionGenerator(move(debtVector)))
                 .map([&currency,&result](SimpleTransaction st) { return st.to_full_transaction(result.people, currency); })
                 .lazy_for_each([](auto const &transaction) { std::cout << transaction << std::endl; })
                 .exhaust();
     }
+
     return 0;
 }

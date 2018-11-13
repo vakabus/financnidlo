@@ -33,7 +33,7 @@ namespace internal {
         person_id_t register_person(string name) {
             canonicalPersonNames.push_back(name);
             usize id = canonicalPersonNames.size() - 1;
-            add_person_alias(std::move(name), id);
+            add_person_alias(move(name), id);
             return id;
         }
 
@@ -52,7 +52,7 @@ namespace internal {
 
         IDRegister(IDRegister &other) = delete;
 
-        IDRegister(IDRegister &&old) : canonicalPersonNames{std::move(old.canonicalPersonNames)}, registry{std::move(old.registry)} {}
+        IDRegister(IDRegister &&old) : canonicalPersonNames{move(old.canonicalPersonNames)}, registry{move(old.registry)} {}
 
         IDRegister &operator=(IDRegister &&old) {
             std::swap(registry, old.registry);
@@ -62,8 +62,8 @@ namespace internal {
         }
 
         void add_person(model::Person person) {
-            auto id = register_person(std::move(person.name));
-            for (auto alias : person.aliases) add_person_alias(std::move(alias), id);
+            auto id = register_person(move(person.name));
+            for (auto alias : person.aliases) add_person_alias(move(alias), id);
         }
 
         usize get_number_of_people() const {
@@ -118,7 +118,7 @@ public:
 
     State(State& other) = delete;
 
-    State(State&& old) /*:currencies(std::move(old.currencies)), people(std::move(old.people))*/ {
+    State(State&& old) /*:currencies(move(old.currencies)), people(move(old.people))*/ {
         // TODO
         // WTF!!! This when get rid of the swaps and put the initialization up into the construction definition,
         // the state passing in iterators stops working
@@ -134,7 +134,7 @@ public:
 };
 
 void handle_def_person(State &state, model::Person p) {
-    state.people.add_person(std::move(p));
+    state.people.add_person(move(p));
 
     // add the person to each currency debt vector
     for (auto&[curr, debtVector] : state.currencies) {
@@ -143,13 +143,13 @@ void handle_def_person(State &state, model::Person p) {
 }
 
 void handle_def_group(State &state, model::Group g) {
-    state.people.add_group(std::move(g));
+    state.people.add_group(move(g));
 }
 
 void handle_def_currency(State &state, model::Currency c) {
     auto n = state.people.get_number_of_people();
     auto p = internal::DebtVector(n);
-    auto[col, success] = state.currencies.insert({c.name, std::move(p)});
+    auto[col, success] = state.currencies.insert({c.name, move(p)});
     if (!success) {
         std::cerr << "Currency \"" << c.name << "\" is defined twice!" << std::endl;
         throw "Currency definition occured for the second time with the same name";
@@ -193,13 +193,13 @@ auto constexpr advance_state = [](model::ConfigElement &&config, State state) ->
     std::visit([&state](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, model::Person>) {
-            handle_def_person(state, std::move(arg));
+            handle_def_person(state, move(arg));
         } else if constexpr (std::is_same_v<T, model::Group>) {
-            handle_def_group(state, std::move(arg));
+            handle_def_group(state, move(arg));
         } else if constexpr (std::is_same_v<T, model::Currency>) {
-            handle_def_currency(state, std::move(arg));
+            handle_def_currency(state, move(arg));
         } else if constexpr (std::is_same_v<T, model::Transaction>) {
-            handle_transaction(state, std::move(arg));
+            handle_transaction(state, move(arg));
         } else {
             std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;
             abort();

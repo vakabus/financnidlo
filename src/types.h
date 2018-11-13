@@ -12,3 +12,5 @@ using u64 = std::uint_fast64_t;
 using i64 = std::int_fast64_t;
 
 using std::optional;
+using std::nullopt;
+using std::move;

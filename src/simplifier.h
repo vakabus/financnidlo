@@ -18,8 +18,8 @@ struct SimpleTransaction {
 
     model::Transaction to_full_transaction(internal::IDRegister &idRegister, string currency) {
         return model::Transaction(std::vector{idRegister.get_canonical_person_name(paidBy)},
-                                         std::pair{amount, std::move(currency)},
-                                         std::vector{idRegister.get_canonical_person_name(paidTo)});
+                                  std::pair{amount, move(currency)},
+                                  std::vector{idRegister.get_canonical_person_name(paidTo)});
     }
 };
 
@@ -28,31 +28,27 @@ private:
     std::vector<double> debtVector;
 public:
     using value_type = SimpleTransaction;
-    SimplifiedTransactionGenerator(vector<double> debtVector) : debtVector(std::move(debtVector)) {
+
+    SimplifiedTransactionGenerator(vector<double> debtVector) : debtVector(move(debtVector)) {
         if (this->debtVector.size() < 2) {
             throw std::logic_error("Does not make sense to generate transactions for so few people!");
         }
     }
 
+    SimplifiedTransactionGenerator(SimplifiedTransactionGenerator &other) = delete;
+
+    SimplifiedTransactionGenerator(SimplifiedTransactionGenerator &&old) {
+        std::swap(this->debtVector, old.debtVector);
+    }
+
     optional<SimpleTransaction> next() {
         // check if we should do something
-        bool shouldGenerateSomething = false;
-        for (auto d : debtVector) {
-            if (std::abs(d) > 0.00001) {
-                shouldGenerateSomething = true;
-                break;
-            }
-        }
-        if (!shouldGenerateSomething)
-            return std::nullopt;
+        if (Iter::from(debtVector).map([](auto d) { return std::abs(d); }).sum() < 0.001)
+            return nullopt;
 
         // greedy algo, take the maximal debtor and maximal loaner and create a transaction between them
-        auto[loaner, loan] = Iter::from(debtVector)
-                .enumerate()
-                .fold([](auto p, auto m) { return m.second > p.second ? m : p; }, std::make_pair((usize)0, DBL_MIN));
-        auto[debtor, debt] = Iter::from(debtVector)
-                .enumerate()
-                .fold([](auto p, auto m) { return m.second < p.second ? m : p; }, std::make_pair((usize)0, DBL_MAX));
+        auto[loaner, loan] = *(Iter::from(debtVector).enumerate().max_by([](auto p) { return p.second; }));
+        auto[debtor, debt] = *(Iter::from(debtVector).enumerate().min_by([](auto p) { return p.second; }));
 
         double transactionVal = std::min(-debt, loan);
 
