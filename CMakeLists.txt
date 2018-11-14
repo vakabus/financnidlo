@@ -12,7 +12,7 @@ add_executable(financnidlo6
         src/main.cpp
         src/model.h
         src/parser.h
-        src/types.h src/simplifier.h)
+        src/types.h src/simplifier.h src/people.h)
 
 add_executable(financnidlo6-test
         tests/main.cpp

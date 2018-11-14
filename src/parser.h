@@ -46,9 +46,9 @@ auto constexpr comment_filter = [](std::string const &line) {
 
 
 namespace {
-    std::pair<double, string> parse_value(string &&val) {
-        string amount;
-        string currency;
+    std::pair<double, std::string> parse_value(std::string &&val) {
+        std::string amount;
+        std::string currency;
         for (auto c : val) {
             if (isdigit(c) || c == '.' || c == ',') {
                 amount.push_back(c);
@@ -64,7 +64,7 @@ namespace {
         auto name = line.at(2);
         auto it = line.begin();
         std::advance(it, 3);
-        auto aliases = vector<string>{it, line.end()};
+        auto aliases = std::vector<std::string>{it, line.end()};
         auto p = model::Person{move(name), move(aliases)};
         return p;
     }
@@ -73,7 +73,7 @@ namespace {
         auto name = line.at(2);
         auto it = line.begin();
         std::advance(it, 3);
-        auto entities = vector<string>{it, line.end()};
+        auto entities = std::vector<std::string>{it, line.end()};
         auto g = model::Group{move(name), move(entities)};
         return g;
     }
@@ -87,7 +87,7 @@ namespace {
     }
 
     model::Transaction parse_transaction(std::vector<std::string> &line) {
-        vector<string> paidBy;
+        std::vector<std::string> paidBy;
         for (auto &a : line) {
             if (a == "paid")
                 break;
@@ -113,7 +113,7 @@ namespace {
 
         auto it = line.begin();
         std::advance(it, paidBy.size() + 3);
-        vector<string> paidFor{it, line.end()};
+        std::vector<std::string> paidFor{it, line.end()};
         model::Transaction t{move(paidBy), move(value), move(paidFor)};
         return t;
     }
@@ -134,4 +134,13 @@ auto constexpr line_parser = [](std::vector<std::string> line) -> model::ConfigE
     } else {
         return parse_transaction(line);
     };
+};
+
+auto constexpr print_definitions = [](const model::ConfigElement& element) {
+    std::visit(overloaded {
+            [](const model::Person& arg) { std::cout << arg << std::endl; },
+            [](const model::Currency& arg) { std::cout << arg << std::endl; },
+            [](const model::Group& arg) { std::cout << arg << std::endl; },
+            [](const auto& arg) {}
+    }, element);
 };

@@ -8,11 +8,12 @@
 #include <variant>
 #include <iostream>
 
-using std::string;
-using std::unordered_map;
-using std::vector;
 
 namespace model {
+    using std::unordered_map;
+    using std::vector;
+    using std::string;
+
     struct Person {
         string name;
         vector<string> aliases;
@@ -20,6 +21,12 @@ namespace model {
         Person(string name, vector<string> aliases) : name{name}, aliases{aliases} {}
         Person(Person &other) = delete;
         Person(Person &&old) : name{move(old.name)}, aliases{move(old.aliases)} {}
+
+        friend std::ostream &operator<<(std::ostream &os, const Person &person) {
+            os << "def person " << person.name;
+            for (auto al : person.aliases) os << " " << al;
+            return os;
+        }
     };
 
     struct Group {
@@ -29,6 +36,12 @@ namespace model {
         Group(string &&name, vector<string> &&mapsTo) : name{move(name)}, mapsTo{move(mapsTo)} {}
         Group(Group &other) = delete;
         Group(Group &&old) : name{move(old.name)}, mapsTo{move(old.mapsTo)} {}
+
+        friend std::ostream &operator<<(std::ostream &os, const Group &group) {
+            os << "def group " << group.name;
+            for (auto mt : group.mapsTo) os << " " << mt;
+            return os;
+        }
     };
     struct Currency {
         string name;
@@ -36,6 +49,11 @@ namespace model {
         Currency(string&& name):name{name}{}
         Currency(Currency&& old): name{old.name}{}
         Currency(Currency& other) = delete;
+
+        friend std::ostream &operator<<(std::ostream &os, const Currency &currency) {
+            os << "def currency " << currency.name;
+            return os;
+        }
     };
 
     using Value = std::pair<double, Currency>;

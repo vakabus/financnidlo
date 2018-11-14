@@ -22,15 +22,17 @@ TEST(IteratorTest, LazyForEach) {
 }
 
 TEST(IteratorTest, FoldStatePassing) {
-    auto state_passer = [](usize a, auto state) { return state; };
-    auto initial_data =std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111};
+    auto constexpr state_passer = [](usize a, auto state) { return state; };
+    auto initial_data = std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111};
+
+    auto result = Iter::range(1000).fold(state_passer, move(initial_data));
     ASSERT_EQ(
-            Iter::range(1000).fold(state_passer, initial_data),
+            result,
             (std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111})
     );
 }
 
 TEST(IteratorTest, ZipIterator) {
-    auto mapper = [](auto pair) {return pair.first;};
+    auto constexpr mapper = [](auto pair) { return pair.first; };
     ASSERT_EQ(Iter::range(100).enumerate().map(mapper).sum(), 4950);
 }

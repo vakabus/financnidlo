@@ -4,6 +4,7 @@
 #include "iterator.h"
 #include "model.h"
 #include "balancer.h"
+#include "people.h"
 #include <limits.h>
 #include <float.h>
 #include <vector>
@@ -12,27 +13,35 @@
 
 
 struct SimpleTransaction {
-    internal::person_id_t paidBy;
+    person_id_t paidBy;
     double amount;
-    internal::person_id_t paidTo;
+    person_id_t paidTo;
 
-    model::Transaction to_full_transaction(internal::IDRegister &idRegister, string currency) {
+    model::Transaction to_full_transaction(IDRegister &idRegister, std::string currency) {
         return model::Transaction(std::vector{idRegister.get_canonical_person_name(paidBy)},
                                   std::pair{amount, move(currency)},
                                   std::vector{idRegister.get_canonical_person_name(paidTo)});
     }
 };
 
+/**
+ * When supplied with debt vector, it provides an iterator for transactions representing that debt vector. Number of
+ * them should be minimal.
+ *
+ * This generator knows only about the numbers, it has no idea about currencies and people, who hold the debt.
+ * That means, that the simplified transaction has to be converted to full transaction before other usage.
+ */
 class SimplifiedTransactionGenerator {
 private:
     std::vector<double> debtVector;
-    SimplifiedTransactionGenerator(vector<double> &&debtVector) : debtVector(move(debtVector)) {
+
+    SimplifiedTransactionGenerator(std::vector<double> &&debtVector) : debtVector(move(debtVector)) {
         if (this->debtVector.size() < 2) {
             throw std::logic_error("Does not make sense to generate transactions for so few people!");
         }
     }
-public:
 
+public:
     using value_type = SimpleTransaction;
 
     SimplifiedTransactionGenerator(SimplifiedTransactionGenerator &other) = delete;
@@ -65,7 +74,7 @@ public:
         return trans;
     }
 
-    static I<SimplifiedTransactionGenerator> create(vector<double> &&debtVector) {
+    static I<SimplifiedTransactionGenerator> create(std::vector<double> &&debtVector) {
         return wrap_iter(SimplifiedTransactionGenerator(move(debtVector)));
     }
 };
