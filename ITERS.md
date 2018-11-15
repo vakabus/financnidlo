@@ -1,6 +1,6 @@
 # Iterators
 
-I didn't like, how the default C++ iterators work. So I implemented my own using a ton of templates 
+I didn't like how the default C++ iterators work. So I implemented my own using a ton of templates 
 and few C++17 features.
 
 ## Main concepts
