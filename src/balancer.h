@@ -104,7 +104,7 @@ auto constexpr advance_state = [](model::ConfigElement &&config, BalancingState 
             [&state](model::Group &&arg) { handle_def_group(state, move(arg)); },
             [&state](model::Currency &&arg) { handle_def_currency(state, move(arg)); },
             [&state](model::Transaction &&arg) { handle_transaction(state, move(arg)); },
-            [](auto &&arg) {
+            [](auto &&_) {
                 std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;
                 abort();
             }

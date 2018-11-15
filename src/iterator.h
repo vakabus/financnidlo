@@ -83,19 +83,24 @@ namespace {
         }
     };
 
-    class FileLineIterator {
+    template <class stream>
+    class StreamLineIterator {
     private:
-        std::ifstream in;
+        stream in;
     public:
         using value_type = std::string;
 
-        explicit FileLineIterator(std::string &&filename) : in{move(filename)} {
-            assert(in.good() && "Can't read the supplied file");
+        explicit StreamLineIterator(stream &&st) :in{move(st)} {
+            assert(in.good() && "Broken stream...");
         }
 
-        FileLineIterator(const FileLineIterator &old) = delete;
+        explicit StreamLineIterator(stream st, bool _copy): in{st} {
+            assert(in.good() && "Broken stream...");
+        };
 
-        FileLineIterator(FileLineIterator &&old) = default;
+        StreamLineIterator(const StreamLineIterator &old) = delete;
+
+        StreamLineIterator(StreamLineIterator &&old) = default;
 
         optional<std::string> next() {
             if (in.eof() || in.fail() || in.bad()) {
@@ -360,7 +365,7 @@ public:
      * Returns whether we run out of values. The comparison is otherwise useless, it's here just for compatibility
      * reasons with the archaic C++ iterators.
      */
-    bool operator==(IOldIteratorEnd &other) const {
+    bool operator==(IOldIteratorEnd &_) const {
         return !last_value_for_oldschool_iter.has_value();
     }
 
@@ -423,8 +428,12 @@ namespace Iter {
         return count_from((usize) 0).take(toExclusive);
     }
 
-    auto file_by_lines(std::string &&file) {
-        return wrap_iter(move(FileLineIterator(move(file))));
+    auto file_by_lines(const std::string &file) {
+        return wrap_iter(StreamLineIterator<std::ifstream>(std::ifstream(file)));
+    }
+
+    auto stdin_by_lines() {
+        return wrap_iter(StreamLineIterator<std::istream&>(std::cin, false));
     }
 
     template<typename Iter1, typename Iter2>

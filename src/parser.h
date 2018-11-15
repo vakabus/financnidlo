@@ -141,6 +141,6 @@ auto constexpr print_definitions = [](const model::ConfigElement& element) {
             [](const model::Person& arg) { std::cout << arg << std::endl; },
             [](const model::Currency& arg) { std::cout << arg << std::endl; },
             [](const model::Group& arg) { std::cout << arg << std::endl; },
-            [](const auto& arg) {}
+            [](const auto& _) {}
     }, element);
 };

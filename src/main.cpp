@@ -5,7 +5,8 @@
 #include "simplifier.h"
 
 int main() {
-    BalancingState result = Iter::file_by_lines("../tests/inputs/01.txt")
+    //BalancingState result = Iter::file_by_lines("./tests/inputs/bigga.txt")
+    BalancingState result = Iter::stdin_by_lines()
             .filter(empty_list_filter)
             .filter(comment_filter)
             .map(token_splitter)
