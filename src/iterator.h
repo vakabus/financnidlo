@@ -146,11 +146,12 @@ namespace {
     private:
         T state;
     public:
+
         IncrementIter(const IncrementIter &other) = delete;
 
         IncrementIter(IncrementIter &&old) = default;
 
-        //TODO fixme check for T's validity
+        static_assert(std::is_same_v<decltype((*(T*) nullptr)++), T>, "Template type does not implement ++ operator.");
         explicit IncrementIter(T &&init) : state{move(init)} {}
 
         using value_type = T;

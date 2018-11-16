@@ -85,8 +85,6 @@ public:
     }
 
     void add_group(model::Group group) {
-        //TODO What to do, when group contains itself?
-        //TODO What to do, when member is defined multiple times? Currently we ignore it.
         auto &g = create_group_record(group.name);
         for (std::string a : group.mapsTo) {
             if (is_group(a))

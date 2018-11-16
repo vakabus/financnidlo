@@ -27,9 +27,9 @@ public:
     BalancingState(BalancingState &other) = delete;
 
     BalancingState(BalancingState &&old) /*:currencies(move(old.currencies)), people(move(old.people))*/ {
-        // TODO
-        // WTF!!! This when get rid of the swaps and put the initialization up into the construction definition,
-        // the state passing in iterators stops working
+        // TODO wtf
+        // WTF!!! This fails when I get rid of the swaps and put the initialization up into the constructor definition,
+        // It causes state passing in iterators to stop working
         std::swap(currencies, old.currencies);
         std::swap(people, old.people);
 
