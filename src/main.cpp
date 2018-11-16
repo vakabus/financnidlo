@@ -4,13 +4,18 @@
 #include "balancer.h"
 #include "simplifier.h"
 
-int main() {
+int main(int argc, char ** argv) {
+    if (argc > 1) {
+        std::cout << "This program takes all its input through stdin. No arguments are allowed." << std::endl;
+        return 0;
+    }
+
     //BalancingState result = Iter::file_by_lines("./tests/inputs/bigga.txt")
     BalancingState result = Iter::stdin_by_lines()
-            .filter(empty_list_filter)
+            .filter(empty_filter)
             .filter(comment_filter)
             .map(token_splitter)
-            .filter(empty_list_filter)
+            .filter(empty_filter)
             .map(line_parser)
             .lazy_for_each(print_definitions)
             .fold(advance_state, BalancingState());

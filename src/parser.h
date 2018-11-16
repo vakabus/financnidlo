@@ -35,7 +35,7 @@ auto constexpr token_splitter = [](std::string &&line) -> std::vector<std::strin
     return result;
 };
 
-auto constexpr empty_list_filter = [](auto const &line) {
+auto constexpr empty_filter = [](auto const &line) {
     return !line.empty();
 };
 
@@ -141,6 +141,6 @@ auto constexpr print_definitions = [](const model::ConfigElement& element) {
             [](const model::Person& arg) { std::cout << arg << std::endl; },
             [](const model::Currency& arg) { std::cout << arg << std::endl; },
             [](const model::Group& arg) { std::cout << arg << std::endl; },
-            [](const auto& _) {}
+            [](const auto& _) {},
     }, element);
 };

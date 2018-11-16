@@ -215,13 +215,7 @@ namespace {
 
 }
 
-template<typename Iter>
-class I;
 
-template<typename Iter>
-I<Iter> wrap_iter(Iter &&iter) {
-    return I(move(iter));
-}
 
 struct IOldIteratorEnd {
 };
@@ -234,10 +228,16 @@ private:
     optional<Iter> iter;
     optional<value_type> last_value_for_oldschool_iter = {};
 
+    template <typename OtherIter>
+    I<OtherIter> wrap_iter(OtherIter&& iter) {
+        return I<OtherIter>(move(iter));
+    }
+
 public:
-    I(I &other) = delete;
 
     I(I &&old) = default;
+
+    I(I &other) = delete;
 
     I(Iter &&iter) : iter{move(iter)} {}
 
@@ -415,9 +415,10 @@ public:
 };
 
 namespace Iter {
+
     template<typename T>
     auto count_from(T init) {
-        return wrap_iter(IncrementIter(move(init)));
+        return I(IncrementIter(move(init)));
     }
 
     auto range(usize fromInclusive, usize toExclusive) {
@@ -429,27 +430,27 @@ namespace Iter {
     }
 
     auto file_by_lines(const std::string &file) {
-        return wrap_iter(StreamLineIterator<std::ifstream>(std::ifstream(file)));
+        return I(StreamLineIterator<std::ifstream>(std::ifstream(file)));
     }
 
     auto stdin_by_lines() {
-        return wrap_iter(StreamLineIterator<std::istream&>(std::cin, false));
+        return I(StreamLineIterator<std::istream&>(std::cin, false));
     }
 
     template<typename Iter1, typename Iter2>
     auto zip(Iter1 &&iter1, Iter2 &&iter2) {
         static_assert(is_iterator<Iter1>::value);
         static_assert(is_iterator<Iter2>::value);
-        return wrap_iter(move(ZipIterator(move(iter1), move(iter2))));
+        return I(move(ZipIterator(move(iter1), move(iter2))));
     }
 
     template<typename Container>
     auto from(Container &&vec) {
-        return wrap_iter(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
+        return I(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
     }
 
     template<typename Container>
     auto from(Container &vec) {
-        return wrap_iter(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
+        return I(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
     }
 }

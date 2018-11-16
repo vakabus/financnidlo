@@ -72,3 +72,7 @@ The project can also be build by CMake, but it's only a secondary option to supp
 ## Implementation
 
 Whole project was implemented using custom functional iterators. For more details, see [ITERS.md](./ITERS.md)
+
+## Performance
+
+My laptop is able to crunch worst possible 100MB input in less than 10s. Worst possible means all definitions, no transactions. Because definitions force reallocation. Input of the same size with mainly transaction takes about 3s. For my needs, that's fast enough.

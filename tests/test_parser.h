@@ -25,10 +25,10 @@ TEST(ParserTest, TokenSplitterMultiToken) {
 }
 
 TEST(ParserTest, EmptyListFilter) {
-    ASSERT_FALSE(empty_list_filter(std::string{""}));
-    ASSERT_TRUE(empty_list_filter(std::string{" "}));
-    ASSERT_FALSE(empty_list_filter(std::vector<int>{}));
-    ASSERT_TRUE(empty_list_filter(std::vector<int>{4}));
+    ASSERT_FALSE(empty_filter(std::string{""}));
+    ASSERT_TRUE(empty_filter(std::string{" "}));
+    ASSERT_FALSE(empty_filter(std::vector<int>{}));
+    ASSERT_TRUE(empty_filter(std::vector<int>{4}));
 }
 
 using std::vector;

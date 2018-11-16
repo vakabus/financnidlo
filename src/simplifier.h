@@ -75,6 +75,6 @@ public:
     }
 
     static I<SimplifiedTransactionGenerator> create(std::vector<double> &&debtVector) {
-        return wrap_iter(SimplifiedTransactionGenerator(move(debtVector)));
+        return I(SimplifiedTransactionGenerator(move(debtVector)));
     }
 };

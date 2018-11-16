@@ -16,6 +16,9 @@ using std::make_optional;
 using std::nullopt;
 using std::move;
 
-// helper type for the visitor #4
+/**
+ * This magic was copied from https://en.cppreference.com/w/cpp/utility/variant/visit
+ * It allows you to make overloaded lambdas...
+ */
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
