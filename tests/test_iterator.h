@@ -36,3 +36,23 @@ TEST(IteratorTest, ZipIterator) {
     auto constexpr mapper = [](auto pair) { return pair.first; };
     ASSERT_EQ(Iter::range(100).enumerate().map(mapper).sum(), 4950);
 }
+
+TEST(IteratorTest, ClassicalIteratorCompatibility1) {
+    usize accum = 0;
+    auto iter = Iter::range(10);
+    auto start = iter.begin();
+    auto en = iter.end();
+    while (start != en) {
+        accum += *start;
+        ++start;
+    }
+    ASSERT_EQ(accum, 45);
+}
+
+TEST(IteratorTest, ClassicalIteratorCompatibility2) {
+    usize accum = 0;
+    for (auto && i : Iter::range(10)) {
+        accum += i;
+    }
+    ASSERT_EQ(accum, 45);
+}

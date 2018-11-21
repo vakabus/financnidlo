@@ -341,40 +341,42 @@ public:
         return make_optional(fold(move(f), move(*first)));
     }
 
-    I &begin() {
+    using iterator = I&;
+
+    std::reference_wrapper<I> begin() {
         last_value_for_oldschool_iter = next();
-        return *this;
+        return std::reference_wrapper(*this);
     }
 
-    value_type &operator*() {
-        if (last_value_for_oldschool_iter)
-            return *last_value_for_oldschool_iter;
+    friend value_type &operator*(std::reference_wrapper<I> & me) {
+        if (me.get().last_value_for_oldschool_iter)
+            return *(me.get().last_value_for_oldschool_iter);
         else
             throw std::range_error("Iterator range overrun!");
     }
 
-    IOldIteratorEnd end() {
+    std::reference_wrapper<I> end() {
         // cause the comparison operator will report ending when comparing with anything, we can just return any garbage
-        return IOldIteratorEnd{};
+        return std::reference_wrapper(*this);
     }
 
-    void operator++() {
-        last_value_for_oldschool_iter = next();
+    friend void operator++(std::reference_wrapper<I> & me) {
+        me.get().last_value_for_oldschool_iter = me.get().next();
     }
 
     /**
      * Returns whether we run out of values. The comparison is otherwise useless, it's here just for compatibility
      * reasons with the archaic C++ iterators.
      */
-    bool operator==(IOldIteratorEnd &_) const {
-        return !last_value_for_oldschool_iter.has_value();
+    friend bool operator==(std::reference_wrapper<I> & me, std::reference_wrapper<I> & _) {
+        return !me.get().last_value_for_oldschool_iter.has_value();
     }
 
     /**
      * See the operator==
      */
-    bool operator!=(IOldIteratorEnd &other) const {
-        return !(*this == other);
+    friend bool operator!=(std::reference_wrapper<I>& me, std::reference_wrapper<I>& other) {
+        return !(me == other);
     }
 
     auto enumerate() {
