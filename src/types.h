@@ -11,11 +11,6 @@ using i32 = std::int_fast32_t;
 using u64 = std::uint_fast64_t;
 using i64 = std::int_fast64_t;
 
-using std::optional;
-using std::make_optional;
-using std::nullopt;
-using std::move;
-
 /**
  * This magic was copied from https://en.cppreference.com/w/cpp/utility/variant/visit
  * It allows you to make overloaded lambdas...

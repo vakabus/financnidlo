@@ -65,7 +65,7 @@ namespace {
         auto it = line.begin();
         std::advance(it, 3);
         auto aliases = std::vector<std::string>{it, line.end()};
-        auto p = model::Person{move(name), move(aliases)};
+        auto p = model::Person{std::move(name), std::move(aliases)};
         return p;
     }
 
@@ -74,7 +74,7 @@ namespace {
         auto it = line.begin();
         std::advance(it, 3);
         auto entities = std::vector<std::string>{it, line.end()};
-        auto g = model::Group{move(name), move(entities)};
+        auto g = model::Group{std::move(name), std::move(entities)};
         return g;
     }
 
@@ -82,7 +82,7 @@ namespace {
         if (line.size() > 3)
             throw std::logic_error("Currency definition contains too many tokens...");
         auto name = line.at(2);
-        auto c = model::Currency{move(name)};
+        auto c = model::Currency{std::move(name)};
         return c;
     }
 
@@ -105,7 +105,7 @@ namespace {
             throw std::logic_error("invalid transaction - missing paid keyword");
         }
 
-        auto value = parse_value(move(line.at(paidBy.size() + 1)));
+        auto value = parse_value(std::move(line.at(paidBy.size() + 1)));
 
         if (line.at(paidBy.size() + 2) != "for") {
             throw std::logic_error("invalid transaction - missing for keyword");
@@ -114,7 +114,7 @@ namespace {
         auto it = line.begin();
         std::advance(it, paidBy.size() + 3);
         std::vector<std::string> paidFor{it, line.end()};
-        model::Transaction t{move(paidBy), move(value), move(paidFor)};
+        model::Transaction t{std::move(paidBy), std::move(value), std::move(paidFor)};
         return t;
     }
 }

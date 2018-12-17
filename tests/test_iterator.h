@@ -25,7 +25,7 @@ TEST(IteratorTest, FoldStatePassing) {
     auto constexpr state_passer = [](usize a, auto state) { return state; };
     auto initial_data = std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111};
 
-    auto result = Iter::range(1000).fold(state_passer, move(initial_data));
+    auto result = Iter::range(1000).fold(state_passer, std::move(initial_data));
     ASSERT_EQ(
             result,
             (std::vector<usize>{1, 2, 3, 4, 5, 6, 7, 8, 9, 111})

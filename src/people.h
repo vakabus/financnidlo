@@ -31,7 +31,7 @@ private:
     person_id_t register_person(std::string name) {
         canonicalPersonNames.push_back(name);
         usize id = canonicalPersonNames.size() - 1;
-        add_person_alias(move(name), id);
+        add_person_alias(std::move(name), id);
         return id;
     }
 
@@ -50,7 +50,7 @@ public:
 
     IDRegister(IDRegister &other) = delete;
 
-    IDRegister(IDRegister &&old) : canonicalPersonNames{move(old.canonicalPersonNames)}, registry{move(old.registry)} {}
+    IDRegister(IDRegister &&old) : canonicalPersonNames{std::move(old.canonicalPersonNames)}, registry{std::move(old.registry)} {}
 
     IDRegister &operator=(IDRegister &&old) {
         std::swap(registry, old.registry);
@@ -60,8 +60,8 @@ public:
     }
 
     void add_person(model::Person person) {
-        auto id = register_person(move(person.name));
-        for (auto alias : person.aliases) add_person_alias(move(alias), id);
+        auto id = register_person(std::move(person.name));
+        for (auto alias : person.aliases) add_person_alias(std::move(alias), id);
     }
 
     usize get_number_of_people() const {

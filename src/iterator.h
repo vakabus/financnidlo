@@ -17,8 +17,8 @@
 template<typename I>
 struct is_iterator {
     constexpr static bool value =
-            std::is_same<decltype(std::declval<I>().next()), optional<typename I::value_type>>::value &&
-            // return value of next and optional<value_type> match
+            std::is_same<decltype(std::declval<I>().next()), std::optional<typename I::value_type>>::value &&
+            // return value of next and std::optional<value_type> match
             !std::is_reference<typename I::value_type>::value; // value_type is not a reference
 };
 
@@ -30,7 +30,7 @@ namespace {
 //    class Iterator {
 //    public:
 //        using value_type = T;
-//        optional<T> next() = 0;
+//        std::optional<T> next() = 0;
 //    };
 
 
@@ -56,11 +56,11 @@ namespace {
 
         MapIterator(MapIterator &&old) = default;
 
-        MapIterator(Iter &&a, Func &&b) : iter{move(a)}, func{move(b)} {}
+        MapIterator(Iter &&a, Func &&b) : iter{std::move(a)}, func{std::move(b)} {}
 
         auto next() {
             auto a = iter.next();
-            return a ? make_optional(func(move(*a))) : nullopt;
+            return a ? std::make_optional(func(std::move(*a))) : std::nullopt;
         }
     };
 
@@ -86,12 +86,12 @@ namespace {
 
         FilterIterator(FilterIterator &&old) = default;
 
-        FilterIterator(Iter &&a, Func &&b) : iter{move(a)}, func{std::move(b)} {}
+        FilterIterator(Iter &&a, Func &&b) : iter{std::move(a)}, func{std::move(b)} {}
 
-        optional<value_type> next() {
+        std::optional<value_type> next() {
             auto a = iter.next();
-            return !a.has_value() ? nullopt :
-                   func(*a) ? make_optional(*a) :
+            return !a.has_value() ? std::nullopt :
+                   func(*a) ? std::make_optional(*a) :
                    next();
         }
     };
@@ -109,7 +109,7 @@ namespace {
     public:
         using value_type = std::string;
 
-        explicit StreamLineIterator(stream &&st) : in{move(st)} {
+        explicit StreamLineIterator(stream &&st) : in{std::move(st)} {
             assert(in.good() && "Broken stream...");
         }
 
@@ -121,13 +121,13 @@ namespace {
 
         StreamLineIterator(StreamLineIterator &&old) = default;
 
-        optional<std::string> next() {
+        std::optional<std::string> next() {
             if (in.eof() || in.fail() || in.bad()) {
-                return nullopt;
+                return std::nullopt;
             } else {
                 std::string line;
                 std::getline(in, line);
-                return optional<std::string>{line};
+                return std::optional<std::string>{line};
             }
         }
     };
@@ -152,16 +152,16 @@ namespace {
 
         ObsoleteIteratorConverter(ObsoleteIteratorConverter &&old) = default;
 
-        ObsoleteIteratorConverter(ObsoleteIter &&start, ObsoleteIter &&ennd) : _start{move(start)},
-                                                                               _end{move(ennd)} {}
+        ObsoleteIteratorConverter(ObsoleteIter &&start, ObsoleteIter &&ennd) : _start{std::move(start)},
+                                                                               _end{std::move(ennd)} {}
 
-        optional<value_type> next() {
+        std::optional<value_type> next() {
             return _start == _end ?
-                   nullopt :
+                   std::nullopt :
                    [&]() {
-                       auto retVal = move(*_start);
+                       auto retVal = std::move(*_start);
                        _start++;
-                       return make_optional(move(retVal));
+                       return std::make_optional(std::move(retVal));
                    }();
         }
     };
@@ -184,12 +184,12 @@ namespace {
 
         static_assert(std::is_same_v<decltype((*(T *) nullptr)++), T>, "Template type does not implement ++ operator.");
 
-        explicit IncrementIter(T &&init) : state{move(init)} {}
+        explicit IncrementIter(T &&init) : state{std::move(init)} {}
 
         using value_type = T;
 
-        optional<T> next() {
-            return make_optional(state++);
+        std::optional<T> next() {
+            return std::make_optional(state++);
         }
     };
 
@@ -214,9 +214,9 @@ namespace {
 
         LimitIterator(LimitIterator &&old) = default;
 
-        LimitIterator(Iter &&iter, usize limit) : limit{limit}, iter{move(iter)} {}
+        LimitIterator(Iter &&iter, usize limit) : limit{limit}, iter{std::move(iter)} {}
 
-        optional<typename Iter::value_type> next() {
+        std::optional<typename Iter::value_type> next() {
             if (count >= limit)
                 return {};
             count++;
@@ -247,16 +247,16 @@ namespace {
 
         ZipIterator(ZipIterator &&old) = default;
 
-        ZipIterator(Iter1 &&iter1, Iter2 &&iter2) : iter1{move(iter1)}, iter2{move(iter2)} {}
+        ZipIterator(Iter1 &&iter1, Iter2 &&iter2) : iter1{std::move(iter1)}, iter2{std::move(iter2)} {}
 
-        optional<value_type> next() {
+        std::optional<value_type> next() {
             auto a = iter1.next();
             auto b = iter2.next();
 
             if (a && b) {
-                return optional(std::pair{*a, *b});
+                return std::optional(std::pair{*a, *b});
             } else {
-                return nullopt;
+                return std::nullopt;
             }
         }
     };
@@ -281,12 +281,12 @@ class I {
 public:
     using value_type = typename Iter::value_type;
 private:
-    optional<Iter> iter;
-    optional<value_type> last_value_for_oldschool_iter = {};
+    std::optional<Iter> iter;
+    std::optional<value_type> last_value_for_oldschool_iter = {};
 
     template<typename OtherIter>
     I<OtherIter> wrap_iter(OtherIter &&iter) {
-        return I<OtherIter>(move(iter));
+        return I<OtherIter>(std::forward<OtherIter>(iter));
     }
 
 public:
@@ -295,7 +295,7 @@ public:
 
     I(I &other) = delete;
 
-    I(Iter &&iter) : iter{move(iter)} {}
+    I(Iter &&iter) : iter{std::move(iter)} {}
 
     static_assert(is_iterator<Iter>::value);
 
@@ -309,9 +309,9 @@ public:
     template<typename Func>
     auto map(Func &&f) {
         assert(iter);
-        MapIterator<Iter, Func> mi(move(*iter), move(f));
+        MapIterator<Iter, Func> mi(std::move(*iter), std::forward<Func>(f));
         iter.reset();
-        return wrap_iter(move(mi));
+        return wrap_iter(std::move(mi));
     }
 
     /**
@@ -324,29 +324,29 @@ public:
     template<typename Func>
     auto lazy_for_each(Func &&f) {
         assert(iter);
-        MapIterator mi(move(*iter), [=](value_type p) {
+        MapIterator mi(std::move(*iter), [=](value_type p) {
             value_type const &r = p;
             f(r);
             return p;
         });
         iter.reset();
-        return wrap_iter(move(mi));
+        return wrap_iter(std::move(mi));
     }
 
     /**
-     * Exhaust the iterator and move every resulting item into the supplied function.
+     * Exhaust the iterator and std::move every resulting item into the supplied function.
      * @tparam Func
      * @param f
      */
     template<typename Func>
     void into(Func &&f) {
         assert(iter);
-        MapIterator mi(move(*iter), [=](value_type p) {
-            f(move(p));
+        MapIterator mi(std::move(*iter), [=](value_type p) {
+            f(std::move(p));
             return 0;
         });
         iter.reset();
-        wrap_iter(move(mi)).exhaust();
+        wrap_iter(std::move(mi)).exhaust();
     }
 
     /**
@@ -358,16 +358,16 @@ public:
     template<typename Func>
     auto filter(Func &&f) {
         assert(iter);
-        FilterIterator<Iter, Func> fi(move(*iter), f);
+        FilterIterator<Iter, Func> fi(std::move(*iter), f);
         iter.reset();
-        return wrap_iter(move(fi));
+        return wrap_iter(std::move(fi));
     }
 
     /**
      * Get next element of the iterator...
      * @return Next element of the iterator as an option
      */
-    optional<value_type> next() {
+    std::optional<value_type> next() {
         assert(iter);
         return (*iter).next();
     }
@@ -398,9 +398,9 @@ public:
      */
     auto take(usize count) {
         assert(iter);
-        LimitIterator li(move(*iter), count);
+        LimitIterator li(std::move(*iter), count);
         iter.reset();
-        return wrap_iter(move(li));
+        return wrap_iter(std::move(li));
     }
 
     /**
@@ -422,10 +422,10 @@ public:
 
         assert(iter);
         while (auto a = iter->next()) {
-            State ss = f(move(*a), move(s));
-            s = move(ss);
+            State ss = f(std::move(*a), std::forward<State>(s));
+            s = std::move(ss);
         }
-        return move(s);
+        return std::forward<State>(s);
     }
 
     /**
@@ -437,17 +437,17 @@ public:
      * @return
      */
     template<typename Func>
-    optional<typename Iter::value_type> reduce(Func &&f) {
+    std::optional<typename Iter::value_type> reduce(Func &&f) {
         static_assert(std::is_same_v<typename Iter::value_type, decltype(f(std::declval<typename Iter::value_type>(),
                                                                            std::declval<typename Iter::value_type>()))>,
                       "Return type is not the same as iterator type!");
         assert(iter);
         auto first = iter->next();
         if (!first) {
-            return nullopt;
+            return std::nullopt;
         }
 
-        return make_optional(fold(move(f), move(*first)));
+        return std::make_optional(fold(std::forward<Func>(f), std::move(*first)));
     }
 
     using iterator = I &;
@@ -517,7 +517,7 @@ public:
      */
     auto enumerate() {
         assert(iter);
-        return wrap_iter(ZipIterator(IncrementIter((usize) 0), move(*iter)));
+        return wrap_iter(ZipIterator(IncrementIter((usize) 0), std::move(*iter)));
     }
 
     /**
@@ -543,7 +543,7 @@ public:
      * Returns the maximal item of the iterator. When there are multiple with the same size, returns the first.
      * @return
      */
-    optional<typename Iter::value_type> max() {
+    std::optional<typename Iter::value_type> max() {
         assert(iter);
         return reduce([](auto a, auto b) { return a > b ? a : b; });
     }
@@ -556,7 +556,7 @@ public:
      * @return
      */
     template<typename Func>
-    optional<typename Iter::value_type> max_by(Func &&f) {
+    std::optional<typename Iter::value_type> max_by(Func &&f) {
         assert(iter);
         return reduce([=](auto a, auto b) { return f(a) > f(b) ? a : b; });
     }
@@ -565,7 +565,7 @@ public:
      * See `max()`
      * @return
      */
-    optional<typename Iter::value_type> min() {
+    std::optional<typename Iter::value_type> min() {
         assert(iter);
         return reduce([](auto a, auto b) { return a < b ? a : b; });
     }
@@ -577,7 +577,7 @@ public:
      * @return
      */
     template<typename Func>
-    optional<typename Iter::value_type> min_by(Func &&f) {
+    std::optional<typename Iter::value_type> min_by(Func &&f) {
         assert(iter);
         return reduce([=](auto a, auto b) { return f(a) < f(b) ? a : b; });
     }
@@ -593,7 +593,7 @@ namespace Iter {
      */
     template<typename T>
     auto count_from(T init) {
-        return I(IncrementIter(move(init)));
+        return I(IncrementIter(std::move(init)));
     }
 
     /**
@@ -645,7 +645,7 @@ namespace Iter {
     auto zip(Iter1 &&iter1, Iter2 &&iter2) {
         static_assert(is_iterator<Iter1>::value);
         static_assert(is_iterator<Iter2>::value);
-        return I(move(ZipIterator(move(iter1), move(iter2))));
+        return I(std::move(ZipIterator(std::move(iter1), std::move(iter2))));
     }
 
     /**
@@ -656,7 +656,7 @@ namespace Iter {
      */
     template<typename Container>
     auto from(Container &&vec) {
-        return I(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
+        return I(std::move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
     }
 
     /**
@@ -667,6 +667,6 @@ namespace Iter {
      */
     template<typename Container>
     auto from(Container &vec) {
-        return I(move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
+        return I(std::move(ObsoleteIteratorConverter(vec.begin(), vec.end())));
     }
 }

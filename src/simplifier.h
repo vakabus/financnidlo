@@ -19,7 +19,7 @@ struct SimpleTransaction {
 
     model::Transaction to_full_transaction(IDRegister &idRegister, std::string currency) {
         return model::Transaction(std::vector{idRegister.get_canonical_person_name(paidBy)},
-                                  std::pair{amount, move(currency)},
+                                  std::pair{amount, std::move(currency)},
                                   std::vector{idRegister.get_canonical_person_name(paidTo)});
     }
 };
@@ -35,7 +35,7 @@ class SimplifiedTransactionGenerator {
 private:
     std::vector<double> debtVector;
 
-    SimplifiedTransactionGenerator(std::vector<double> &&debtVector) : debtVector(move(debtVector)) {
+    SimplifiedTransactionGenerator(std::vector<double> &&debtVector) : debtVector(std::move(debtVector)) {
         if (this->debtVector.size() < 2) {
             throw std::logic_error("Does not make sense to generate transactions for so few people!");
         }
@@ -50,10 +50,10 @@ public:
         std::swap(this->debtVector, old.debtVector);
     }
 
-    optional<SimpleTransaction> next() {
+    std::optional<SimpleTransaction> next() {
         // check if we should do something
         if (Iter::from(debtVector).map([](auto d) { return std::abs(d); }).max() < 0.001)
-            return nullopt;
+            return std::nullopt;
 
         // greedy algo, take the maximal debtor and maximal loaner and create a transaction between them
         auto[loaner, loan] = *(Iter::from(debtVector).enumerate().max_by([](auto p) { return p.second; }));
@@ -75,6 +75,6 @@ public:
     }
 
     static I<SimplifiedTransactionGenerator> create(std::vector<double> &&debtVector) {
-        return I(SimplifiedTransactionGenerator(move(debtVector)));
+        return I(SimplifiedTransactionGenerator(std::move(debtVector)));
     }
 };

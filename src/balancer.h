@@ -26,7 +26,7 @@ public:
 
     BalancingState(BalancingState &other) = delete;
 
-    BalancingState(BalancingState &&old) /*:currencies(move(old.currencies)), people(move(old.people))*/ {
+    BalancingState(BalancingState &&old) /*:currencies(std::move(old.currencies)), people(std::move(old.people))*/ {
         // TODO wtf
         // WTF!!! This fails when I get rid of the swaps and put the initialization up into the constructor definition,
         // It causes state passing in iterators to stop working
@@ -43,7 +43,7 @@ public:
 };
 
 void handle_def_person(BalancingState &state, model::Person p) {
-    state.people.add_person(move(p));
+    state.people.add_person(std::move(p));
 
     // add the person to each currency debt vector
     for (auto&[curr, debtVector] : state.currencies) {
@@ -52,13 +52,13 @@ void handle_def_person(BalancingState &state, model::Person p) {
 }
 
 void handle_def_group(BalancingState &state, model::Group g) {
-    state.people.add_group(move(g));
+    state.people.add_group(std::move(g));
 }
 
 void handle_def_currency(BalancingState &state, model::Currency c) {
     auto n = state.people.get_number_of_people();
     auto p = DebtVector(n);
-    auto[col, success] = state.currencies.insert({c.name, move(p)});
+    auto[col, success] = state.currencies.insert({c.name, std::move(p)});
     if (!success) {
         std::cerr << "Currency \"" << c.name << "\" is defined twice!" << std::endl;
         throw "Currency definition occured for the second time with the same name";
@@ -100,14 +100,14 @@ void handle_transaction(BalancingState &state, model::Transaction t) {
 
 auto constexpr advance_state = [](model::ConfigElement &&config, BalancingState &&state) -> BalancingState {
     std::visit(overloaded {
-            [&state](model::Person &&arg) { handle_def_person(state, move(arg)); },
-            [&state](model::Group &&arg) { handle_def_group(state, move(arg)); },
-            [&state](model::Currency &&arg) { handle_def_currency(state, move(arg)); },
-            [&state](model::Transaction &&arg) { handle_transaction(state, move(arg)); },
+            [&state](model::Person &&arg) { handle_def_person(state, std::move(arg)); },
+            [&state](model::Group &&arg) { handle_def_group(state, std::move(arg)); },
+            [&state](model::Currency &&arg) { handle_def_currency(state, std::move(arg)); },
+            [&state](model::Transaction &&arg) { handle_transaction(state, std::move(arg)); },
             [](auto &&_) {
                 std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;
                 abort();
             }
-    }, move(config));
-    return move(state);
+    }, std::move(config));
+    return std::move(state);
 };

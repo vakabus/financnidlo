@@ -4,6 +4,11 @@
 #include "balancer.h"
 #include "simplifier.h"
 
+using std::optional;
+using std::make_optional;
+using std::nullopt;
+using std::move;
+
 int main(int argc, char ** argv) {
     if (argc > 1) {
         std::cout << "This program takes all its input through stdin. No arguments are allowed." << std::endl;
