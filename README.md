@@ -17,7 +17,8 @@ Input is newline sensitive, words (tokens) can be separated by any number of whi
         * names are case insensitive
     * `def group name members`
         * group can have other groups as a member
-        * group is a set of people
+        * group is a set of people (in mathematical sense, nobody can be in a group twice)
+        * group is just a shortcut for its members
     * `def currency name`
 * transactions
     * `somebody paid 123.4currency for someone`
@@ -55,7 +56,8 @@ Transaction in the input and in the output result to equivalent debts between pe
 
 ## Build
 
-To build, clone the repo and run `make build`. Might work only with the latest GCC.
+To build, clone the repo and run `make build`. For compiling, both GCC and Clang can be used. Tested with GCC 8.2.1 and Clang 7.0.0.
+The project relies quite heavily on C++17, so it might not be possible to use much older compilers.
 
 The project can also be build by CMake, but it's only a secondary option to support CLion, which is not happy with simple Makefile. 
 
