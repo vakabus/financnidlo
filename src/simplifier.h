@@ -67,9 +67,9 @@ public:
 
         // save new transaction
         SimpleTransaction trans;
-        trans.paidBy = loaner;
+        trans.paidBy = debtor;
         trans.amount = transactionVal;
-        trans.paidTo = debtor;
+        trans.paidTo = loaner;
 
         return trans;
     }
