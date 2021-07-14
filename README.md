@@ -24,6 +24,9 @@ Input is newline sensitive, words (tokens) can be separated by any number of whi
     * `somebody paid 123.4currency for someone`
         * `somebody` and `someone` can be a list of people, also groups and aliases
         * transactions between groups of people will be divided equally between all members
+* currency transformations
+    * `convert 1eur to 26czk`
+        * bill all transactions in `eur` in the `czk` currency using the conversion ratio 1eur to 26czk
 
 ### Example
 

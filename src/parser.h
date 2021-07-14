@@ -117,6 +117,19 @@ namespace {
         model::Transaction t{std::move(paidBy), std::move(value), std::move(paidFor)};
         return t;
     }
+
+    model::CurrencyTransformation parse_currency_transformation(std::vector<std::string> &line) {
+        if (line.at(0) != "convert") {
+            throw std::logic_error("invalid currency conversion definition, expected 'convert' as the first token");
+        }
+        auto from = parse_value(std::move(line.at(1)));
+        if (line.at(2) != "to") {
+            throw std::logic_error("invalid currency conversion definition, expected 'to' as the third token");
+        }
+        auto to = parse_value(std::move(line.at(3)));
+
+        return std::make_pair(from, to);
+    }
 }
 
 auto constexpr line_parser = [](std::vector<std::string> line) -> model::ConfigElement {
@@ -131,6 +144,8 @@ auto constexpr line_parser = [](std::vector<std::string> line) -> model::ConfigE
         } else {
             throw std::logic_error("Invalid definition!");
         }
+    } else if (line.at(0) == "convert") {
+        return parse_currency_transformation(line);
     } else {
         return parse_transaction(line);
     };
@@ -141,6 +156,7 @@ auto constexpr print_definitions = [](const model::ConfigElement& element) {
             [](const model::Person& arg) { std::cout << arg << std::endl; },
             [](const model::Currency& arg) { std::cout << arg << std::endl; },
             [](const model::Group& arg) { std::cout << arg << std::endl; },
+            [](const model::CurrencyTransformation& arg) { std::cout << arg << std::endl; },
             [](const auto& _) {},
     }, element);
 };

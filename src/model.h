@@ -54,10 +54,25 @@ namespace model {
             os << "def currency " << currency.name;
             return os;
         }
+
+        bool operator==(const Currency &other) const {
+            return this->name == other.name;
+        }
     };
 
     using Value = std::pair<double, Currency>;
+
+    std::ostream &operator<<(std::ostream &os, const Value &val) {
+        os << std::get<0>(val) << std::get<1>(val).name;
+        return os;
+    }
+
     using CurrencyTransformation = std::pair<Value, Value>;
+
+    std::ostream &operator<<(std::ostream &os, const CurrencyTransformation &trans) {
+        os << "convert " << std::get<0>(trans) << " to " << std::get<1>(trans);
+        return os;
+    }
 
     struct Transaction {
         vector<string> paidBy;
@@ -78,7 +93,7 @@ namespace model {
         }
     };
 
-    using ConfigElement = std::variant<Person, Group, Currency, Transaction>;
+    using ConfigElement = std::variant<Person, Group, Currency, Transaction, CurrencyTransformation>;
 
     bool operator==(const ConfigElement& ce, const Person& p) {
         return std::holds_alternative<Person>(ce) && std::get<Person>(ce).name == p.name && std::get<Person>(ce).aliases == p.aliases;
@@ -94,6 +109,10 @@ namespace model {
 
     bool operator==(const ConfigElement& ce, const Transaction& p) {
         return std::holds_alternative<Transaction>(ce) && std::get<Transaction>(ce).paidBy == p.paidBy && std::get<Transaction>(ce).value == p.value && std::get<Transaction>(ce).paidFor == p.paidFor;
+    }
+
+    bool operator==(const ConfigElement& ce, const CurrencyTransformation& p) {
+        return std::holds_alternative<CurrencyTransformation>(ce) && std::get<CurrencyTransformation>(ce) == p;
     }
 
 }

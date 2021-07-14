@@ -14,6 +14,7 @@
 namespace {
     using DebtVector = std::vector<double>;
     using CurrencyDebts = std::unordered_map<std::string, DebtVector>;
+    using Conversions = std::unordered_map<std::string, model::Value>;
 }
 
 class BalancingState {
@@ -21,8 +22,9 @@ private:
 public:
     CurrencyDebts currencies;
     IDRegister people;
+    Conversions conversions;
 
-    BalancingState() : currencies{}, people{} {}
+    BalancingState() : currencies{}, people{}, conversions{} {}
 
     BalancingState(BalancingState &other) = delete;
 
@@ -32,12 +34,14 @@ public:
         // It causes state passing in iterators to stop working
         std::swap(currencies, old.currencies);
         std::swap(people, old.people);
+        std::swap(conversions, old.conversions);
 
     }
 
     BalancingState &operator=(BalancingState &&old) {
         std::swap(currencies, old.currencies);
         std::swap(people, old.people);
+        std::swap(conversions, old.conversions);
         return *this;
     }
 };
@@ -83,18 +87,57 @@ std::unordered_set<person_id_t> get_all_people(BalancingState const &state, std:
 void handle_transaction(BalancingState &state, model::Transaction t) {
     auto payees = get_all_people(state, t.paidBy);
     auto receivers = get_all_people(state, t.paidFor);
-    auto &debtVector = state.currencies.at(t.value.second);
+
+    auto currency = t.value.second;
+    DebtVector *debtVector = &state.currencies.at(t.value.second);  //FIXME can we do it without using pointers and only
+                                                                    // using references? I don't know how
+    double conversionRate = 1.;
+
+    // check if we should perform conversion
+    auto conversion = state.conversions.find(currency);
+    if (conversion != state.conversions.end()) {
+        debtVector = &state.currencies.at(conversion->second.second.name);
+        conversionRate = conversion->second.first;
+    }
 
     auto paidByIndividual = t.value.first / payees.size();
     auto receivedByIndividual = t.value.first / receivers.size();
 
     // add debt to each receiver
     for (auto id : receivers)
-        debtVector.at(id) = debtVector.at(id) + receivedByIndividual;
+        debtVector->at(id) = debtVector->at(id) + receivedByIndividual * conversionRate;
 
     // remove debt from each payee
     for (auto id : payees)
-        debtVector.at(id) = debtVector.at(id) - paidByIndividual;
+        debtVector->at(id) = debtVector->at(id) - paidByIndividual * conversionRate;
+}
+
+void handle_currency_transformation(BalancingState &state, model::CurrencyTransformation transformation) {
+    const auto& from = transformation.first;
+    const auto& to = transformation.second;
+
+    const auto sourceCurrencyName = from.second.name;
+    if (state.conversions.find(sourceCurrencyName) != state.conversions.end()) {
+        std::cerr << "Duplicate currency conversion found! Aborting!" << std::endl;
+        abort();
+    }
+    const auto targetCurrencyName = to.second.name;
+    const double conversionRate = to.first / from.first;
+
+    // save the conversion rate
+    state.conversions.insert({sourceCurrencyName, std::make_pair(conversionRate, targetCurrencyName)});
+
+    // convert all existing balance
+    auto res = state.currencies.find(sourceCurrencyName);
+    if (res != state.currencies.end()) {
+        const auto sourceDebtVector = res->second;
+        const auto targetDebtVector = state.currencies.at(targetCurrencyName);
+        DebtVector nTarget = Iter::zip(Iter::from(sourceDebtVector), Iter::from(targetDebtVector))
+                .map([=](auto vals){ return vals.second + vals.first * conversionRate;})
+                .collect();
+        state.currencies[targetCurrencyName] = nTarget;
+        state.currencies[sourceCurrencyName] = DebtVector(state.people.get_number_of_people());
+    }
 }
 
 
@@ -104,6 +147,7 @@ auto constexpr advance_state = [](model::ConfigElement &&config, BalancingState 
             [&state](model::Group &&arg) { handle_def_group(state, std::move(arg)); },
             [&state](model::Currency &&arg) { handle_def_currency(state, std::move(arg)); },
             [&state](model::Transaction &&arg) { handle_transaction(state, std::move(arg)); },
+            [&state](model::CurrencyTransformation &&arg) { handle_currency_transformation(state, std::move(arg)); },
             [](auto &&_) {
                 std::cerr << "Unimplemented config element appeared! No idea what to do!" << std::endl;
                 abort();
